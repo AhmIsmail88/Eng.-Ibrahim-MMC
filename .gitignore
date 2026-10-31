@@ -1,0 +1,16 @@
+﻿__pycache__/
+*.pyc
+.venv/
+build/
+dist/
+*.sqlite3
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.pytest-tmp/
+.zwork/
+data/
+logs/
+*.eibak
+.DS_Store
+Thumbs.db
