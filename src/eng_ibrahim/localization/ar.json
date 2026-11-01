@@ -666,5 +666,14 @@
  "wo.expense.add": "إضافة مصروف",
  "wo.expense.amount": "المبلغ",
  "wo.expense.type": "النوع",
- "wo.expense.notes": "ملاحظات"
+ "wo.expense.notes": "ملاحظات",
+ "wo.tab.downtime": "التوقف",
+ "wo.downtime.start": "بدء توقف",
+ "wo.downtime.stop": "إنهاء التوقف",
+ "wo.downtime.from": "من",
+ "wo.downtime.to": "إلى",
+ "wo.downtime.type": "النوع",
+ "value.downtime.unplanned": "غير مخطط",
+ "value.downtime.planned": "مخطط",
+ "value.downtime.external": "خارجي"
 }

@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 from ...application.context import AppContext
 from ...application.dto.maintenance import WoDetail
 from ...application.services.asset_service import AssetService
+from ...application.services.downtime_service import DowntimeService
 from ...application.services.inspection_service import InspectionService
 from ...application.services.master_data_service import MasterDataService
 from ...application.services.work_order_service import WorkOrderService
@@ -103,6 +104,7 @@ class WorkOrdersPage(BasePage):
         super().__init__(ctx)
         self.service = WorkOrderService(ctx.db)
         self.inspections = InspectionService(ctx.db)
+        self.downtime = DowntimeService(ctx.db)
         self.assets = AssetService(ctx.db)
         self.masters = MasterDataService(ctx.db)
         self._rows: list = []
@@ -158,6 +160,7 @@ class WorkOrdersPage(BasePage):
         self.tabs.addTab(self._build_time(), "")
         self.tabs.addTab(self._build_history(), "")
         self.tabs.addTab(self._build_inspections(), "")
+        self.tabs.addTab(self._build_downtime(), "")
         right_lay.addWidget(self.head)
         right_lay.addWidget(self.meta)
         right_lay.addWidget(self.tabs, 1)
@@ -242,6 +245,25 @@ class WorkOrdersPage(BasePage):
         lay.addLayout(bar)
         return page
 
+    def _build_downtime(self) -> QWidget:
+        page = QWidget()
+        lay = QVBoxLayout(page)
+        self.down_table = QTableWidget(0, 3)
+        self.down_table.verticalHeader().setVisible(False)
+        self.down_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.down_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.btn_down_start = QPushButton()
+        self.btn_down_start.clicked.connect(self._start_downtime)
+        self.btn_down_stop = QPushButton()
+        self.btn_down_stop.clicked.connect(self._stop_downtime)
+        bar = QHBoxLayout()
+        bar.addWidget(self.btn_down_start)
+        bar.addWidget(self.btn_down_stop)
+        bar.addStretch(1)
+        lay.addWidget(self.down_table, 1)
+        lay.addLayout(bar)
+        return page
+
     def retranslate(self) -> None:
         tr = self.ctx.tr
         self.title.setText(tr("wo.title"))
@@ -252,6 +274,11 @@ class WorkOrdersPage(BasePage):
         self.tabs.setTabText(1, tr("wo.tab.time"))
         self.tabs.setTabText(2, tr("wo.tab.history"))
         self.tabs.setTabText(3, tr("wo.tab.inspections"))
+        self.tabs.setTabText(4, tr("wo.tab.downtime"))
+        self.btn_down_start.setText(tr("wo.downtime.start"))
+        self.btn_down_stop.setText(tr("wo.downtime.stop"))
+        self.down_table.setHorizontalHeaderLabels([tr(k) for k in (
+            "wo.downtime.from", "wo.downtime.to", "wo.downtime.type")])
         self.btn_insp_start.setText(tr("insp.start"))
         self.btn_insp_open.setText(tr("insp.open"))
         self.insp_table.setHorizontalHeaderLabels([tr(k) for k in (
@@ -351,6 +378,9 @@ class WorkOrdersPage(BasePage):
         self.btn_time.setEnabled(editable)
         self.btn_insp_start.setEnabled(self.ctx.can_edit and d.status != sm.CANCELLED)
         self._render_inspections(d)
+        self.btn_down_start.setEnabled(self.ctx.can_edit)
+        self.btn_down_stop.setEnabled(self.ctx.can_edit)
+        self._render_downtime(d)
         allowed = set(sm.allowed_targets(d.status, self.ctx.current_user.role
                                          if self.ctx.current_user else None))
         for _key, sources, target in _ACTIONS:
@@ -370,6 +400,20 @@ class WorkOrdersPage(BasePage):
                 if col == 0:
                     item.setData(Qt.ItemDataRole.UserRole, run.id)
                 self.insp_table.setItem(i, col, item)
+
+    def _render_downtime(self, d) -> None:
+        rows = self.downtime.list_for_asset(d.asset_id)
+        self._down_rows = rows
+        self.down_table.setRowCount(len(rows))
+        for i, (downtime_id, started, ended, kind, _reason) in enumerate(rows):
+            cells = (started[:16].replace("T", " "),
+                     (ended or "…")[:16].replace("T", " "),
+                     self.ctx.tr(f"value.downtime.{kind}"))
+            for col, text in enumerate(cells):
+                item = QTableWidgetItem(text)
+                if col == 0:
+                    item.setData(Qt.ItemDataRole.UserRole, downtime_id)
+                self.down_table.setItem(i, col, item)
 
     # ---------------- commands ----------------
     def _new(self) -> None:
@@ -509,6 +553,23 @@ class WorkOrdersPage(BasePage):
             self.ctx.current_user, self._detail.id, task_id,
             self.ctx.tr("wo.task.done_result"), not current.is_completed)
         self._after(result)
+
+    def _start_downtime(self) -> None:
+        if self._detail is None or not self.ctx.can_edit:
+            return
+        from ...infrastructure.database.orm_models.base import utcnow_iso
+        result = self.downtime.start(self.ctx.current_user, self._detail.asset_id,
+                                     utcnow_iso(), "unplanned")
+        self._after(result)
+
+    def _stop_downtime(self) -> None:
+        if self._detail is None or not self.ctx.can_edit:
+            return
+        from ...infrastructure.database.orm_models.base import utcnow_iso
+        event = self.downtime.open_event(self._detail.asset_id)
+        if event is None:
+            return
+        self._after(self.downtime.end(self.ctx.current_user, event.id, utcnow_iso()))
 
     def _add_expense(self) -> None:
         if self._detail is None or not self.ctx.can_edit:

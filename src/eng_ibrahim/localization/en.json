@@ -666,5 +666,14 @@
  "wo.expense.add": "Add expense",
  "wo.expense.amount": "Amount",
  "wo.expense.type": "Type",
- "wo.expense.notes": "Notes"
+ "wo.expense.notes": "Notes",
+ "wo.tab.downtime": "Downtime",
+ "wo.downtime.start": "Start downtime",
+ "wo.downtime.stop": "End downtime",
+ "wo.downtime.from": "From",
+ "wo.downtime.to": "To",
+ "wo.downtime.type": "Type",
+ "value.downtime.unplanned": "Unplanned",
+ "value.downtime.planned": "Planned",
+ "value.downtime.external": "External"
 }

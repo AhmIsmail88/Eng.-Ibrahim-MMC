@@ -36,7 +36,7 @@ def test_work_orders_page_lists_created_order(qtbot, ctx, paths):
     qtbot.addWidget(page)
     page.refresh()
     assert page.table.rowCount() == 1
-    assert page.tabs.count() == 4
+    assert page.tabs.count() == 5
     page.table.selectRow(0)
     assert page._detail is not None
 

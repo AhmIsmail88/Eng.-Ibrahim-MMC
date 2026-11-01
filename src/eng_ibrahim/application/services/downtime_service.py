@@ -23,6 +23,14 @@ class DowntimeService:
     def __init__(self, db: Database) -> None:
         self._db = db
 
+    def list_for_asset(self, asset_id: str, limit: int = 50):
+        """(id, started_at, ended_at, type, reason) newest first."""
+        with self._db.session() as s:
+            rows = s.scalars(select(DowntimeEvent)
+                             .where(DowntimeEvent.asset_id == asset_id)
+                             .order_by(DowntimeEvent.started_at.desc()).limit(limit))
+            return [(r.id, r.started_at, r.ended_at, r.downtime_type, r.reason) for r in rows]
+
     def open_event(self, asset_id: str) -> DowntimeEvent | None:
         with self._db.session() as s:
             return s.scalars(select(DowntimeEvent).where(
