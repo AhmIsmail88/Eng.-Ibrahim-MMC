@@ -9,6 +9,7 @@ from ...infrastructure.database.engine import Database
 from ...infrastructure.database.orm_models import (
     AssetCategory,
     AssetType,
+    FailureCode,
     Location,
     OperatingCalendar,
     Supplier,
@@ -175,6 +176,27 @@ class MasterDataService:
             categories = {c.id: c.code for c in s.scalars(select(AssetCategory))}
             return [(t.id, t.code, t.name_ar, categories.get(t.category_id, "—"))
                     for t in s.scalars(select(AssetType).order_by(AssetType.code))]
+
+    def create_failure_code(self, actor: AuthUser | None, group_code: str, code: str,
+                            name_ar: str, name_en: str | None = None) -> Result[str]:
+        guard = _require_editor(actor)
+        if not guard.ok:
+            return Result.failure(guard.error_code or "err.permission_denied")
+        group, code = normalize_code(group_code), normalize_code(code)
+        name = (name_ar or "").strip()
+        if not group or not code or not name:
+            return Result.failure("err.failure_code_required")
+        with self._db.unit_of_work() as s:
+            exists = s.scalar(select(FailureCode.id).where(
+                FailureCode.group_code == group, func.lower(FailureCode.code) == code.lower()))
+            if exists:
+                return Result.failure("err.code_exists")
+            row = FailureCode(group_code=group, code=code, name_ar=name, name_en=name_en)
+            s.add(row)
+            s.flush()
+            write_audit(s, "failure_code", row.id, "failure_code_created",
+                        actor_id=actor.id if actor else None, after={"code": code})
+            return Result.success(row.id)
 
     def technician_rows(self) -> list[tuple[str, str, str, str, str, bool]]:
         """(id, code, name, trade, department, active) for the roster screen."""

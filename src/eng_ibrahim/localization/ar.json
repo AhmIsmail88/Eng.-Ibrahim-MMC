@@ -656,5 +656,8 @@
  "audit.reason": "السبب",
  "master.failure_codes": "أكواد الأعطال",
  "master.task_library": "مكتبة المهام",
- "master.units": "الوحدات"
+ "master.units": "الوحدات",
+ "master.new_failure_code": "كود عطل جديد",
+ "master.group": "المجموعة",
+ "err.failure_code_required": "المجموعة والكود والاسم مطلوبة."
 }

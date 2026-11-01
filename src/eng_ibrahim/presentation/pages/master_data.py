@@ -66,7 +66,17 @@ class MasterDataPage(BasePage):
         self.fc_table = self._table()
         self.task_table = self._table()
         self.unit_table = self._table()
-        for table in (self.fc_table, self.task_table, self.unit_table):
+        fc_page = QWidget()
+        fc_lay = QVBoxLayout(fc_page)
+        self.btn_fc = QPushButton()
+        self.btn_fc.clicked.connect(self._new_failure_code)
+        fc_bar = QHBoxLayout()
+        fc_bar.addStretch(1)
+        fc_bar.addWidget(self.btn_fc)
+        fc_lay.addWidget(self.fc_table, 1)
+        fc_lay.addLayout(fc_bar)
+        self.tabs.addTab(fc_page, "")
+        for table in (self.task_table, self.unit_table):
             page = QWidget()
             inner = QVBoxLayout(page)
             inner.addWidget(table)
@@ -127,6 +137,7 @@ class MasterDataPage(BasePage):
         self.tabs.setTabText(3, tr("master.failure_codes"))
         self.tabs.setTabText(4, tr("master.task_library"))
         self.tabs.setTabText(5, tr("master.units"))
+        self.btn_fc.setText(tr("master.new_failure_code"))
         for table in (self.fc_table, self.task_table, self.unit_table):
             table.setHorizontalHeaderLabels([tr("master.code"), tr("master.name"),
                                              tr("master.extra")])
@@ -157,7 +168,7 @@ class MasterDataPage(BasePage):
             self.type_table.setItem(i, 0, QTableWidgetItem(code))
             self.type_table.setItem(i, 1, QTableWidgetItem(name))
             self.type_table.setItem(i, 2, QTableWidgetItem(category))
-        for btn in (self.btn_loc, self.btn_cat, self.btn_type):
+        for btn in (self.btn_loc, self.btn_cat, self.btn_type, self.btn_fc):
             btn.setEnabled(self.ctx.can_edit)
         with self.ctx.db.session() as session:
             codes = session.scalars(select(FailureCode).order_by(FailureCode.code)).all()
@@ -219,6 +230,20 @@ class MasterDataPage(BasePage):
             return
         result = self.service.create_type(self.ctx.current_user, category.currentData(),
                                           code.text(), name.text())
+        self._done(result)
+
+    def _new_failure_code(self) -> None:
+        group = QComboBox()
+        group.addItems(["MECH", "ELEC", "INST", "OPER", "EXT", "OTH"])
+        code, name = QLineEdit(), QLineEdit()
+        dialog = _Dialog(self.ctx, self.ctx.tr("master.new_failure_code"), [
+            (self.ctx.tr("master.group"), group), (self.ctx.tr("master.code"), code),
+            (self.ctx.tr("master.name"), name)], self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        result = self.service.create_failure_code(self.ctx.current_user,
+                                                  group.currentText(), code.text(),
+                                                  name.text())
         self._done(result)
 
     def _done(self, result) -> None:

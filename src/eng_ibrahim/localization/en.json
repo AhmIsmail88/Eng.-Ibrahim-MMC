@@ -656,5 +656,8 @@
  "audit.reason": "Reason",
  "master.failure_codes": "Failure codes",
  "master.task_library": "Task library",
- "master.units": "Units"
+ "master.units": "Units",
+ "master.new_failure_code": "New failure code",
+ "master.group": "Group",
+ "err.failure_code_required": "Group, code and name are required."
 }
