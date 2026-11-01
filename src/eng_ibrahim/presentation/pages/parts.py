@@ -165,13 +165,15 @@ class PartsPage(BasePage):
         self.btn_issue.clicked.connect(self._issue)
         self.btn_adjust = QPushButton()
         self.btn_adjust.clicked.connect(self._adjust)
+        self.btn_count = QPushButton()
+        self.btn_count.clicked.connect(self._stock_count)
         self.btn_refresh = QPushButton()
         self.btn_refresh.clicked.connect(self.refresh)
         bar.addWidget(self.search)
         bar.addWidget(self.low_only)
         bar.addStretch(1)
         for btn in (self.btn_new, self.btn_receive, self.btn_issue, self.btn_adjust,
-                    self.btn_refresh):
+                    self.btn_count, self.btn_refresh):
             bar.addWidget(btn)
         lay.addLayout(bar)
 
@@ -207,6 +209,7 @@ class PartsPage(BasePage):
         self.btn_receive.setText(tr("parts.receive"))
         self.btn_issue.setText(tr("parts.issue"))
         self.btn_adjust.setText(tr("parts.adjust"))
+        self.btn_count.setText(tr("parts.count"))
         self.btn_refresh.setText(tr("common.refresh"))
         self.table.setHorizontalHeaderLabels([tr(k) for k in (
             "parts.code", "parts.name", "parts.on_hand", "parts.reserved",
@@ -302,6 +305,58 @@ class PartsPage(BasePage):
             return
         result = self.inventory.adjust(self.ctx.current_user, part.id, qty, reason)
         self._after(result)
+
+    def _stock_count(self) -> None:
+        if not self.ctx.can_edit or not self._rows:
+            return
+        dialog = QDialog(self)
+        dialog.setWindowTitle(self.ctx.tr("parts.count"))
+        dialog.setMinimumSize(560, 420)
+        lay = QVBoxLayout(dialog)
+        hint = QLabel(self.ctx.tr("parts.count_hint"))
+        hint.setWordWrap(True)
+        lay.addWidget(hint)
+        table = QTableWidget(len(self._rows), 3)
+        table.setHorizontalHeaderLabels([
+            self.ctx.tr("parts.code"), self.ctx.tr("parts.on_hand"),
+            self.ctx.tr("parts.counted")])
+        table.verticalHeader().setVisible(False)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        for row, part in enumerate(self._rows):
+            code = QTableWidgetItem(part.code)
+            code.setFlags(code.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            system = QTableWidgetItem(part.on_hand)
+            system.setFlags(system.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            counted = QTableWidgetItem(part.on_hand)
+            table.setItem(row, 0, code)
+            table.setItem(row, 1, system)
+            table.setItem(row, 2, counted)
+        lay.addWidget(table)
+        box = QDialogButtonBox(QDialogButtonBox.StandardButton.Save
+                               | QDialogButtonBox.StandardButton.Cancel)
+        box.accepted.connect(dialog.accept)
+        box.rejected.connect(dialog.reject)
+        lay.addWidget(box)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        applied = 0
+        for row, part in enumerate(self._rows):
+            value = table.item(row, 2).text().strip()
+            if not value or value == part.on_hand:
+                continue
+            try:
+                delta = float(value) - float(part.on_hand)
+            except ValueError:
+                continue
+            if abs(delta) < 1e-9:
+                continue
+            result = self.inventory.adjust(self.ctx.current_user, part.id, str(delta),
+                                           self.ctx.tr("parts.count_reason"))
+            if result.ok:
+                applied += 1
+        self.refresh()
+        QMessageBox.information(self, self.ctx.tr("parts.count"),
+                                self.ctx.tr("parts.count_done", count=applied))
 
     def _after(self, result) -> None:
         if not result.ok:
