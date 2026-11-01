@@ -11,6 +11,7 @@ from ...infrastructure.database.orm_models import (
     AssetType,
     FailureCode,
     Location,
+    MaintenanceTask,
     OperatingCalendar,
     Supplier,
     Technician,
@@ -195,6 +196,25 @@ class MasterDataService:
             s.add(row)
             s.flush()
             write_audit(s, "failure_code", row.id, "failure_code_created",
+                        actor_id=actor.id if actor else None, after={"code": code})
+            return Result.success(row.id)
+
+    def create_task(self, actor: AuthUser | None, task_code: str, title_ar: str,
+                    estimated_min: int | None = None) -> Result[str]:
+        guard = _require_editor(actor)
+        if not guard.ok:
+            return Result.failure(guard.error_code or "err.permission_denied")
+        code, title = normalize_code(task_code), (title_ar or "").strip()
+        if not code or not title:
+            return Result.failure("err.task_required")
+        with self._db.unit_of_work() as s:
+            if s.scalar(select(MaintenanceTask.id).where(
+                    func.lower(MaintenanceTask.task_code) == code.lower())):
+                return Result.failure("err.code_exists")
+            row = MaintenanceTask(task_code=code, title_ar=title, estimated_min=estimated_min)
+            s.add(row)
+            s.flush()
+            write_audit(s, "task_library", row.id, "task_created",
                         actor_id=actor.id if actor else None, after={"code": code})
             return Result.success(row.id)
 

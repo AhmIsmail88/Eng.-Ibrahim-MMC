@@ -659,5 +659,8 @@
  "master.units": "الوحدات",
  "master.new_failure_code": "كود عطل جديد",
  "master.group": "المجموعة",
- "err.failure_code_required": "المجموعة والكود والاسم مطلوبة."
+ "err.failure_code_required": "المجموعة والكود والاسم مطلوبة.",
+ "master.new_task": "مهمة جديدة",
+ "master.minutes": "المدة (دقيقة)",
+ "err.task_required": "كود المهمة وعنوانها مطلوبان."
 }

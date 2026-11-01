@@ -659,5 +659,8 @@
  "master.units": "Units",
  "master.new_failure_code": "New failure code",
  "master.group": "Group",
- "err.failure_code_required": "Group, code and name are required."
+ "err.failure_code_required": "Group, code and name are required.",
+ "master.new_task": "New task",
+ "master.minutes": "Duration (min)",
+ "err.task_required": "Task code and title are required."
 }

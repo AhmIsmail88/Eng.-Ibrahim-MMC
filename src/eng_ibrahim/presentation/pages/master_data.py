@@ -76,11 +76,20 @@ class MasterDataPage(BasePage):
         fc_lay.addWidget(self.fc_table, 1)
         fc_lay.addLayout(fc_bar)
         self.tabs.addTab(fc_page, "")
-        for table in (self.task_table, self.unit_table):
-            page = QWidget()
-            inner = QVBoxLayout(page)
-            inner.addWidget(table)
-            self.tabs.addTab(page, "")
+        task_page = QWidget()
+        task_lay = QVBoxLayout(task_page)
+        self.btn_task_new = QPushButton()
+        self.btn_task_new.clicked.connect(self._new_task)
+        task_bar = QHBoxLayout()
+        task_bar.addStretch(1)
+        task_bar.addWidget(self.btn_task_new)
+        task_lay.addWidget(self.task_table, 1)
+        task_lay.addLayout(task_bar)
+        self.tabs.addTab(task_page, "")
+        unit_page = QWidget()
+        unit_lay = QVBoxLayout(unit_page)
+        unit_lay.addWidget(self.unit_table)
+        self.tabs.addTab(unit_page, "")
         card_lay.addWidget(self.tabs)
         lay.addWidget(card, 1)
 
@@ -138,6 +147,7 @@ class MasterDataPage(BasePage):
         self.tabs.setTabText(4, tr("master.task_library"))
         self.tabs.setTabText(5, tr("master.units"))
         self.btn_fc.setText(tr("master.new_failure_code"))
+        self.btn_task_new.setText(tr("master.new_task"))
         for table in (self.fc_table, self.task_table, self.unit_table):
             table.setHorizontalHeaderLabels([tr("master.code"), tr("master.name"),
                                              tr("master.extra")])
@@ -168,7 +178,8 @@ class MasterDataPage(BasePage):
             self.type_table.setItem(i, 0, QTableWidgetItem(code))
             self.type_table.setItem(i, 1, QTableWidgetItem(name))
             self.type_table.setItem(i, 2, QTableWidgetItem(category))
-        for btn in (self.btn_loc, self.btn_cat, self.btn_type, self.btn_fc):
+        for btn in (self.btn_loc, self.btn_cat, self.btn_type, self.btn_fc,
+                    self.btn_task_new):
             btn.setEnabled(self.ctx.can_edit)
         with self.ctx.db.session() as session:
             codes = session.scalars(select(FailureCode).order_by(FailureCode.code)).all()
@@ -244,6 +255,19 @@ class MasterDataPage(BasePage):
         result = self.service.create_failure_code(self.ctx.current_user,
                                                   group.currentText(), code.text(),
                                                   name.text())
+        self._done(result)
+
+    def _new_task(self) -> None:
+        code, title = QLineEdit(), QLineEdit()
+        minutes = QLineEdit()
+        dialog = _Dialog(self.ctx, self.ctx.tr("master.new_task"), [
+            (self.ctx.tr("master.code"), code), (self.ctx.tr("master.name"), title),
+            (self.ctx.tr("master.minutes"), minutes)], self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        estimate = int(minutes.text()) if minutes.text().strip().isdigit() else None
+        result = self.service.create_task(self.ctx.current_user, code.text(), title.text(),
+                                          estimate)
         self._done(result)
 
     def _done(self, result) -> None:
