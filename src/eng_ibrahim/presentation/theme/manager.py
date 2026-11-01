@@ -5,6 +5,7 @@ from PySide6.QtGui import QFont, QGuiApplication
 from PySide6.QtWidgets import QApplication
 
 from ...domain.enums import ThemeMode
+from ..fonts import resolve_ui_family
 from .tokens import DARK, LIGHT
 
 FONT_FAMILIES = ["Noto Sans Arabic", "Segoe UI", "Tahoma", "Inter", "Arial"]
@@ -68,7 +69,11 @@ class ThemeManager:
             self.mode = mode
         self.effective = resolve_mode(self.mode)
         font = QFont()
-        font.setFamilies(FONT_FAMILIES)
+        family = resolve_ui_family()
+        if family:
+            font.setFamilies([family])
+        else:  # keep the list as a hint for platforms with lazy font enumeration
+            font.setFamilies(FONT_FAMILIES)
         font.setPointSize(10)
         self.app.setFont(font)
         self.app.setStyleSheet(build_qss(self.effective, self.rtl))
