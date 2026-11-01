@@ -25,6 +25,7 @@ from ...application.services.status_service import StatusService
 from ...domain.enums import Language, ThemeMode
 from ..branding import load_app_icon, logo_pixmap
 from ..pages.assets import AssetsPage
+from ..pages.audit import AuditPage
 from ..pages.base import BasePage
 from ..pages.dashboard import DashboardPage
 from ..pages.failures import FailuresPage
@@ -54,6 +55,7 @@ NAV_ITEMS: list[tuple[str, str, int]] = [
     ("nav.spare_parts", "▤", 4),
     ("nav.technicians", "☺", 1),
     ("nav.master_data", "▦", 0),
+    ("nav.audit", "⌸", 0),
     ("nav.reports", "▥", 5),
     ("nav.users", "☷", 0),
     ("nav.settings", "⚒", 0),
@@ -199,6 +201,8 @@ class MainWindow(QMainWindow):
                 page = TechniciansPage(self.ctx)
             elif key == "nav.master_data":
                 page = MasterDataPage(self.ctx)
+            elif key == "nav.audit":
+                page = AuditPage(self.ctx)
             elif key == "nav.users":
                 page = UsersPage(self.ctx)
             elif key == "nav.settings":

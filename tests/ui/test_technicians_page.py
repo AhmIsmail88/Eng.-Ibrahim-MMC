@@ -31,4 +31,4 @@ def test_roster_lists_and_toggles(qtbot, ctx, paths):
     page.table.selectRow(0)
     page._toggle()
     assert page.table.item(0, 4).text() == ctx.tr("users.inactive")
-    assert [t for t in masters.technicians(active_only=True)] == []
+    assert list(masters.technicians(active_only=True)) == []

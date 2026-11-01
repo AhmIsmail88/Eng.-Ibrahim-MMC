@@ -646,5 +646,12 @@
  "err.type_required": "كود النوع واسمه مطلوبان.",
  "kpi.overdue_pm": "صيانة وقائية متأخرة",
  "kpi.due_soon_pm": "صيانة وقائية قريبة",
- "kpi.low_stock": "أصناف تحت الحد"
+ "kpi.low_stock": "أصناف تحت الحد",
+ "nav.audit": "سجل التتبع",
+ "audit.title": "سجل التتبع",
+ "audit.at": "التاريخ",
+ "audit.actor": "المستخدم",
+ "audit.action": "الإجراء",
+ "audit.entity": "الكيان",
+ "audit.reason": "السبب"
 }

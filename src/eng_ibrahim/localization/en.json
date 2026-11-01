@@ -646,5 +646,12 @@
  "err.type_required": "Type code and name are required.",
  "kpi.overdue_pm": "Overdue PM",
  "kpi.due_soon_pm": "PM due soon",
- "kpi.low_stock": "Low stock items"
+ "kpi.low_stock": "Low stock items",
+ "nav.audit": "Audit log",
+ "audit.title": "Audit log",
+ "audit.at": "Date",
+ "audit.actor": "User",
+ "audit.action": "Action",
+ "audit.entity": "Entity",
+ "audit.reason": "Reason"
 }
