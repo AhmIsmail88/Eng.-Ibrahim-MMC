@@ -123,3 +123,6 @@ class Kpis:
     open_work_orders: int
     open_failures: int
     overdue_work_orders: int
+    overdue_pm: int = 0
+    due_soon_pm: int = 0
+    low_stock: int = 0

@@ -184,6 +184,9 @@ class WorkOrdersPage(BasePage):
         self.btn_task = QPushButton()
         self.btn_task.clicked.connect(self._add_task)
         bar = QHBoxLayout()
+        self.btn_task_done = QPushButton()
+        self.btn_task_done.clicked.connect(self._toggle_task)
+        bar.addWidget(self.btn_task_done)
         bar.addStretch(1)
         bar.addWidget(self.btn_task)
         lay.addWidget(self.tasks, 1)
@@ -251,6 +254,7 @@ class WorkOrdersPage(BasePage):
         self.insp_table.setHorizontalHeaderLabels([tr(k) for k in (
             "insp.number", "insp.template_title", "wo.status", "insp.failed")])
         self.btn_task.setText(tr("wo.task.add"))
+        self.btn_task_done.setText(tr("wo.task.toggle"))
         self.btn_time.setText(tr("wo.time.add"))
         self.table.setHorizontalHeaderLabels([tr(k) for k in (
             "wo.number", "wo.asset", "wo.type", "wo.form.title_label", "wo.status",
@@ -315,7 +319,9 @@ class WorkOrdersPage(BasePage):
             + (f" · {cost.total_minor / 100:,.2f} {cost.currency}" if cost else ""))
         self.tasks.setRowCount(len(d.tasks))
         for i, task in enumerate(d.tasks):
-            self.tasks.setItem(i, 0, QTableWidgetItem(f"{task.sequence}. {task.title}"))
+            first = QTableWidgetItem(f"{task.sequence}. {task.title}")
+            first.setData(Qt.ItemDataRole.UserRole, task.id)
+            self.tasks.setItem(i, 0, first)
             self.tasks.setItem(i, 1, QTableWidgetItem(
                 "✓" if task.required else "—"))
             self.tasks.setItem(i, 2, QTableWidgetItem(
@@ -336,6 +342,7 @@ class WorkOrdersPage(BasePage):
         editable = self.ctx.can_edit and d.status in (sm.DRAFT, sm.OPEN, sm.ASSIGNED,
                                                       sm.IN_PROGRESS, sm.ON_HOLD)
         self.btn_task.setEnabled(editable)
+        self.btn_task_done.setEnabled(editable)
         self.btn_time.setEnabled(editable)
         self.btn_insp_start.setEnabled(self.ctx.can_edit and d.status != sm.CANCELLED)
         self._render_inspections(d)
@@ -481,6 +488,22 @@ class WorkOrdersPage(BasePage):
                                     self.ctx.tr(result.error_code or "err.invalid"))
         if self._detail is not None:
             self._render_inspections(self._detail)
+
+    def _toggle_task(self) -> None:
+        if self._detail is None or not self.ctx.can_edit:
+            return
+        row = self.tasks.currentRow()
+        item = self.tasks.item(row, 0) if row >= 0 else None
+        if item is None:
+            return
+        task_id = item.data(Qt.ItemDataRole.UserRole)
+        current = next((t for t in self._detail.tasks if t.id == task_id), None)
+        if current is None:
+            return
+        result = self.service.set_task_result(
+            self.ctx.current_user, self._detail.id, task_id,
+            self.ctx.tr("wo.task.done_result"), not current.is_completed)
+        self._after(result)
 
     def _add_task(self) -> None:
         if self._detail is None:

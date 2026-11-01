@@ -29,11 +29,13 @@ from ..pages.base import BasePage
 from ..pages.dashboard import DashboardPage
 from ..pages.failures import FailuresPage
 from ..pages.inspections import InspectionsPage
+from ..pages.master_data import MasterDataPage
 from ..pages.parts import PartsPage
 from ..pages.placeholder import PlaceholderPage
 from ..pages.preventive import PMPage
 from ..pages.reports import ReportsPage
 from ..pages.settings import SettingsPage
+from ..pages.technicians import TechniciansPage
 from ..pages.users import UsersPage
 from ..pages.work_orders import WorkOrdersPage
 from ..theme.manager import ThemeManager
@@ -51,6 +53,7 @@ NAV_ITEMS: list[tuple[str, str, int]] = [
     ("nav.checklists", "✓", 3),
     ("nav.spare_parts", "▤", 4),
     ("nav.technicians", "☺", 1),
+    ("nav.master_data", "▦", 0),
     ("nav.reports", "▥", 5),
     ("nav.users", "☷", 0),
     ("nav.settings", "⚒", 0),
@@ -192,6 +195,10 @@ class MainWindow(QMainWindow):
                 page = PartsPage(self.ctx)
             elif key == "nav.reports":
                 page = ReportsPage(self.ctx)
+            elif key == "nav.technicians":
+                page = TechniciansPage(self.ctx)
+            elif key == "nav.master_data":
+                page = MasterDataPage(self.ctx)
             elif key == "nav.users":
                 page = UsersPage(self.ctx)
             elif key == "nav.settings":

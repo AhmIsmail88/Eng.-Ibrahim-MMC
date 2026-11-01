@@ -15,6 +15,8 @@ from ...infrastructure.database.orm_models import (
     WorkOrder,
 )
 from ..dto.maintenance import BoardRow, Kpis
+from .inventory_service import InventoryService
+from .pm_service import PMService
 
 OPEN_WO_STATUSES = ("Open", "Assigned", "InProgress", "OnHold")
 ACTIVE_FAILURE_STATUSES = ("New", "Investigating")
@@ -47,8 +49,13 @@ class DashboardService:
                 WorkOrder.status.in_(OPEN_WO_STATUSES),
                 WorkOrder.due_at.is_not(None),
                 WorkOrder.due_at < today)) or 0)
+        plans = PMService(self._db).list()
+        overdue_pm = sum(1 for plan in plans if plan.state == "Overdue")
+        due_soon_pm = sum(1 for plan in plans if plan.state == "DueSoon")
+        low_stock = len(InventoryService(self._db).list_parts(low_only=True))
         return Kpis(total_assets=total, open_work_orders=open_wos,
-                    open_failures=open_failures, overdue_work_orders=overdue)
+                    open_failures=open_failures, overdue_work_orders=overdue,
+                    overdue_pm=overdue_pm, due_soon_pm=due_soon_pm, low_stock=low_stock)
 
     def board(self, category_code: str | None = "PUMP",
               include_retired: bool = False) -> list[BoardRow]:

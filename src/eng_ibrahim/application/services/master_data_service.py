@@ -148,6 +148,57 @@ class MasterDataService:
                         actor_id=actor.id if actor else None, after={"code": code})
             return Result.success(row.id)
 
+    def create_type(self, actor: AuthUser | None, category_id: str, code: str,
+                    name_ar: str, name_en: str | None = None) -> Result[str]:
+        guard = _require_editor(actor)
+        if not guard.ok:
+            return Result.failure(guard.error_code or "err.permission_denied")
+        code, name = normalize_code(code), (name_ar or "").strip()
+        if not code or not name:
+            return Result.failure("err.type_required")
+        with self._db.unit_of_work() as s:
+            if s.get(AssetCategory, category_id) is None:
+                return Result.failure("err.category_required")
+            if s.scalar(select(AssetType.id).where(
+                    func.lower(AssetType.code) == code.lower())):
+                return Result.failure("err.code_exists")
+            row = AssetType(category_id=category_id, code=code, name_ar=name, name_en=name_en)
+            s.add(row)
+            s.flush()
+            write_audit(s, "asset_type", row.id, "type_created",
+                        actor_id=actor.id if actor else None, after={"code": code})
+            return Result.success(row.id)
+
+    def types_with_category(self) -> list[tuple[str, str, str, str]]:
+        """(id, code, name, category_code) for the master-data screen."""
+        with self._db.session() as s:
+            categories = {c.id: c.code for c in s.scalars(select(AssetCategory))}
+            return [(t.id, t.code, t.name_ar, categories.get(t.category_id, "—"))
+                    for t in s.scalars(select(AssetType).order_by(AssetType.code))]
+
+    def technician_rows(self) -> list[tuple[str, str, str, str, str, bool]]:
+        """(id, code, name, trade, department, active) for the roster screen."""
+        with self._db.session() as s:
+            return [(r.id, r.technician_code, r.full_name, r.trade or "—",
+                     r.department or "—", bool(r.is_active))
+                    for r in s.scalars(select(Technician)
+                                       .order_by(Technician.technician_code))]
+
+    def set_technician_active(self, actor: AuthUser | None, technician_id: str,
+                              active: bool) -> Result[None]:
+        guard = _require_editor(actor)
+        if not guard.ok:
+            return Result.failure(guard.error_code or "err.permission_denied")
+        with self._db.unit_of_work() as s:
+            row = s.get(Technician, technician_id)
+            if row is None:
+                return Result.failure("err.not_found")
+            row.is_active = 1 if active else 0
+            write_audit(s, "technician", row.id,
+                        "technician_enabled" if active else "technician_disabled",
+                        actor_id=actor.id if actor else None)
+            return Result.success()
+
     def create_supplier(self, actor: AuthUser | None, code: str, name: str,
                         contact_info: str | None = None) -> Result[str]:
         guard = _require_editor(actor)

@@ -50,8 +50,10 @@ class DashboardPage(BasePage):
 
         cards = QHBoxLayout()
         self.card_assets, self.card_wos = _Card(), _Card()
-        self.card_failures, self.card_overdue = _Card(), _Card()
-        for card in (self.card_assets, self.card_wos, self.card_failures, self.card_overdue):
+        self.card_pm_overdue, self.card_pm_soon = _Card(), _Card()
+        self.card_low = _Card()
+        for card in (self.card_assets, self.card_wos, self.card_pm_overdue,
+                     self.card_pm_soon, self.card_low):
             cards.addWidget(card)
         lay.addLayout(cards)
 
@@ -90,8 +92,9 @@ class DashboardPage(BasePage):
         self.board_title.setText(tr("board.title"))
         self.card_assets.caption.setText(tr("kpi.total_assets"))
         self.card_wos.caption.setText(tr("kpi.open_wos"))
-        self.card_failures.caption.setText(tr("kpi.open_failures"))
-        self.card_overdue.caption.setText(tr("kpi.overdue_wos"))
+        self.card_pm_overdue.caption.setText(tr("kpi.overdue_pm"))
+        self.card_pm_soon.caption.setText(tr("kpi.due_soon_pm"))
+        self.card_low.caption.setText(tr("kpi.low_stock"))
         headers = ("board.col.asset", "board.col.category", "board.col.location",
                    "board.col.status", "board.col.fault", "board.col.repair", "board.col.wo")
         self.table.setHorizontalHeaderLabels([tr(k) for k in headers])
@@ -117,8 +120,9 @@ class DashboardPage(BasePage):
         kpis = self.service.kpis()
         self.card_assets.value.setText(str(kpis.total_assets))
         self.card_wos.value.setText(str(kpis.open_work_orders))
-        self.card_failures.value.setText(str(kpis.open_failures))
-        self.card_overdue.value.setText(str(kpis.overdue_work_orders))
+        self.card_pm_overdue.value.setText(str(kpis.overdue_pm))
+        self.card_pm_soon.value.setText(str(kpis.due_soon_pm))
+        self.card_low.value.setText(str(kpis.low_stock))
 
         rows = self.service.board(self.cat.currentData())
         self.table.setRowCount(len(rows))
