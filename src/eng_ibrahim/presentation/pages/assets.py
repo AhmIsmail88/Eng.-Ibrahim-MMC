@@ -1,6 +1,7 @@
 """Asset registry screen: list + profile tabs + create/edit dialog (SPEC 5)."""
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import QDate, Qt, QUrl
@@ -45,6 +46,7 @@ from ...infrastructure.database.orm_models.operations import (
     OPERATIONAL_STATUS,
     STRATEGY,
 )
+from ...infrastructure.exports.qr_labels import write_sheet
 from .base import BasePage, make_card, make_title, set_ltr_value, vbox
 
 
@@ -351,6 +353,8 @@ class AssetsPage(BasePage):
         self.btn_new.clicked.connect(self._new)
         self.btn_import = QPushButton()
         self.btn_import.clicked.connect(self._import)
+        self.btn_qr = QPushButton()
+        self.btn_qr.clicked.connect(self._qr_sheet)
         self.btn_refresh = QPushButton()
         self.btn_refresh.clicked.connect(self.refresh)
         for w in (self.search, self.cat, self.status, self.archived):
@@ -358,6 +362,7 @@ class AssetsPage(BasePage):
         bar.addStretch(1)
         bar.addWidget(self.btn_new)
         bar.addWidget(self.btn_import)
+        bar.addWidget(self.btn_qr)
         bar.addWidget(self.btn_refresh)
         lay.addLayout(bar)
 
@@ -501,6 +506,7 @@ class AssetsPage(BasePage):
         self.search.setPlaceholderText(tr("assets.search_hint"))
         self.btn_new.setText(tr("assets.new"))
         self.btn_import.setText(tr("assets.import"))
+        self.btn_qr.setText(tr("assets.qr"))
         self.btn_refresh.setText(tr("common.refresh"))
         self.archived.setText(tr("assets.include_archived"))
         self.btn_edit.setText(tr("assets.form.edit_title"))
@@ -741,6 +747,25 @@ class AssetsPage(BasePage):
         QMessageBox.information(self, self.ctx.tr("assets.new_location"),
                                 self.ctx.tr("assets.new_location_hint"))
         return False
+
+    def _qr_sheet(self) -> None:
+        if not self._rows:
+            return
+        stamp = datetime.now().strftime("%Y-%m-%d_%H%M")
+        default = Path.home() / "Documents" / f"ENG_IBRAHIM_QR_{stamp}.png"
+        path, _f = QFileDialog.getSaveFileName(self, self.ctx.tr("assets.qr"),
+                                               str(default), "PNG (*.png)")
+        if not path:
+            return
+        arabic = self.ctx.localizer.is_rtl
+        items = [(row.code, row.name(arabic)) for row in self._rows[:40]]
+        try:
+            write_sheet(items, Path(path))
+        except Exception as exc:
+            QMessageBox.critical(self, self.ctx.tr("assets.qr"), str(exc))
+            return
+        QMessageBox.information(self, self.ctx.tr("assets.qr"),
+                                self.ctx.tr("reports.saved", path=path))
 
     def _import(self) -> None:
         if not self.ctx.can_edit:

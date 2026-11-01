@@ -678,5 +678,6 @@
  "value.downtime.external": "خارجي",
  "master.warehouses": "المخازن",
  "master.new_warehouse": "مخزن جديد",
- "err.warehouse_required": "كود المخزن واسمه مطلوبان."
+ "err.warehouse_required": "كود المخزن واسمه مطلوبان.",
+ "assets.qr": "ملصقات QR"
 }
