@@ -542,6 +542,8 @@ class WorkOrdersPage(BasePage):
         if self._detail is None or not self.ctx.can_edit:
             return
         row = self.tasks.currentRow()
+        if row < 0 and self.tasks.rowCount():
+            row = 0
         item = self.tasks.item(row, 0) if row >= 0 else None
         if item is None:
             return
