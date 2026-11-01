@@ -706,5 +706,11 @@
  "parts.counted": "الكمية الفعلية",
  "parts.count_hint": "عدّل الكمية الفعلية للأصناف التي تختلف عن الرصيد ثم احفظ — الفرق يُرحّل كتسوية.",
  "parts.count_reason": "جرد فعلي",
- "parts.count_done": "تم ترحيل {count} تسوية."
+ "parts.count_done": "تم ترحيل {count} تسوية.",
+ "nav.suppliers": "الموردون",
+ "sup.title": "الموردون",
+ "sup.new": "مورد جديد",
+ "sup.code": "الكود *",
+ "sup.name": "الاسم *",
+ "sup.contact": "بيانات التواصل"
 }

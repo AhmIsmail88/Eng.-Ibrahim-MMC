@@ -280,6 +280,26 @@ class MasterDataService:
                         actor_id=actor.id if actor else None, after={"code": code})
             return Result.success(row.id)
 
+    def supplier_rows(self) -> list[tuple[str, str, str, str, bool]]:
+        with self._db.session() as s:
+            return [(r.id, r.supplier_code, r.name, r.contact_info or "—", bool(r.is_active))
+                    for r in s.scalars(select(Supplier).order_by(Supplier.supplier_code))]
+
+    def set_supplier_active(self, actor: AuthUser | None, supplier_id: str,
+                            active: bool) -> Result[None]:
+        guard = _require_editor(actor)
+        if not guard.ok:
+            return Result.failure(guard.error_code or "err.permission_denied")
+        with self._db.unit_of_work() as s:
+            row = s.get(Supplier, supplier_id)
+            if row is None:
+                return Result.failure("err.not_found")
+            row.is_active = 1 if active else 0
+            write_audit(s, "supplier", row.id,
+                        "supplier_enabled" if active else "supplier_disabled",
+                        actor_id=actor.id if actor else None)
+            return Result.success()
+
     def create_calendar(self, actor: AuthUser | None, code: str, name_ar: str,
                         name_en: str | None = None) -> Result[str]:
         guard = _require_editor(actor)

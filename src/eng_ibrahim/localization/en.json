@@ -706,5 +706,11 @@
  "parts.counted": "Counted",
  "parts.count_hint": "Adjust counted quantities where they differ, then save — differences post as adjustments.",
  "parts.count_reason": "Physical count",
- "parts.count_done": "Posted {count} adjustments."
+ "parts.count_done": "Posted {count} adjustments.",
+ "nav.suppliers": "Suppliers",
+ "sup.title": "Suppliers",
+ "sup.new": "New supplier",
+ "sup.code": "Code *",
+ "sup.name": "Name *",
+ "sup.contact": "Contact details"
 }
