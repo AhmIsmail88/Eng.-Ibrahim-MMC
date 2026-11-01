@@ -117,8 +117,10 @@ class BackupService:
         folder = Path(directory) if directory else self._paths.backups
         if keep < 1 or not folder.exists():
             return 0
+        # Names embed the creation timestamp (YYYY-MM-DD_HHMMSS), so name order is
+        # chronological and deterministic even when two files share an mtime.
         archives = sorted(folder.glob("ENG_IBRAHIM_BACKUP_*.eibak"),
-                          key=lambda p: p.stat().st_mtime, reverse=True)
+                          key=lambda p: p.name, reverse=True)
         removed = 0
         for archive in archives[keep:]:
             try:
