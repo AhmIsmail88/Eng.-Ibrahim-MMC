@@ -19,7 +19,7 @@ def test_tabs_and_seeded_rows(qtbot, ctx, paths):
     page = MasterDataPage(ctx)
     qtbot.addWidget(page)
     page.refresh()
-    assert page.tabs.count() == 3
+    assert page.tabs.count() == 6
     assert page.loc_table.rowCount() >= 1      # seeded MAIN location
     assert page.cat_table.rowCount() >= 1      # seeded categories
     assert page.type_table.rowCount() >= 1     # seeded types

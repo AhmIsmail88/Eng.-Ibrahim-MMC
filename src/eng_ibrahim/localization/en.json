@@ -653,5 +653,8 @@
  "audit.actor": "User",
  "audit.action": "Action",
  "audit.entity": "Entity",
- "audit.reason": "Reason"
+ "audit.reason": "Reason",
+ "master.failure_codes": "Failure codes",
+ "master.task_library": "Task library",
+ "master.units": "Units"
 }

@@ -18,9 +18,11 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from sqlalchemy import select
 
 from ...application.context import AppContext
 from ...application.services.master_data_service import MasterDataService
+from ...infrastructure.database.orm_models import FailureCode, MaintenanceTask, Unit
 from .base import BasePage, make_card, make_title, vbox
 
 
@@ -61,6 +63,14 @@ class MasterDataPage(BasePage):
         self.tabs.addTab(self._tab_locations(), "")
         self.tabs.addTab(self._tab_categories(), "")
         self.tabs.addTab(self._tab_types(), "")
+        self.fc_table = self._table()
+        self.task_table = self._table()
+        self.unit_table = self._table()
+        for table in (self.fc_table, self.task_table, self.unit_table):
+            page = QWidget()
+            inner = QVBoxLayout(page)
+            inner.addWidget(table)
+            self.tabs.addTab(page, "")
         card_lay.addWidget(self.tabs)
         lay.addWidget(card, 1)
 
@@ -114,6 +124,12 @@ class MasterDataPage(BasePage):
         self.tabs.setTabText(0, tr("master.locations"))
         self.tabs.setTabText(1, tr("master.categories"))
         self.tabs.setTabText(2, tr("master.types"))
+        self.tabs.setTabText(3, tr("master.failure_codes"))
+        self.tabs.setTabText(4, tr("master.task_library"))
+        self.tabs.setTabText(5, tr("master.units"))
+        for table in (self.fc_table, self.task_table, self.unit_table):
+            table.setHorizontalHeaderLabels([tr("master.code"), tr("master.name"),
+                                             tr("master.extra")])
         self.btn_loc.setText(tr("master.new_location"))
         self.btn_cat.setText(tr("master.new_category"))
         self.btn_type.setText(tr("master.new_type"))
@@ -143,6 +159,27 @@ class MasterDataPage(BasePage):
             self.type_table.setItem(i, 2, QTableWidgetItem(category))
         for btn in (self.btn_loc, self.btn_cat, self.btn_type):
             btn.setEnabled(self.ctx.can_edit)
+        with self.ctx.db.session() as session:
+            codes = session.scalars(select(FailureCode).order_by(FailureCode.code)).all()
+            self.fc_table.setRowCount(len(codes))
+            for i, code in enumerate(codes):
+                self.fc_table.setItem(i, 0, QTableWidgetItem(code.code))
+                self.fc_table.setItem(i, 1, QTableWidgetItem(code.name_ar))
+                self.fc_table.setItem(i, 2, QTableWidgetItem(code.group_code))
+            tasks = session.scalars(select(MaintenanceTask)
+                                    .order_by(MaintenanceTask.task_code)).all()
+            self.task_table.setRowCount(len(tasks))
+            for i, task in enumerate(tasks):
+                self.task_table.setItem(i, 0, QTableWidgetItem(task.task_code))
+                self.task_table.setItem(i, 1, QTableWidgetItem(task.title_ar))
+                self.task_table.setItem(i, 2, QTableWidgetItem(
+                    f"{task.estimated_min} min" if task.estimated_min else ""))
+            units = session.scalars(select(Unit).order_by(Unit.code)).all()
+            self.unit_table.setRowCount(len(units))
+            for i, unit in enumerate(units):
+                self.unit_table.setItem(i, 0, QTableWidgetItem(unit.code))
+                self.unit_table.setItem(i, 1, QTableWidgetItem(unit.label_ar))
+                self.unit_table.setItem(i, 2, QTableWidgetItem(unit.dimension))
 
     # ---------------- commands ----------------
     def _new_location(self) -> None:

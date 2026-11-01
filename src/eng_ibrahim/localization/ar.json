@@ -653,5 +653,8 @@
  "audit.actor": "المستخدم",
  "audit.action": "الإجراء",
  "audit.entity": "الكيان",
- "audit.reason": "السبب"
+ "audit.reason": "السبب",
+ "master.failure_codes": "أكواد الأعطال",
+ "master.task_library": "مكتبة المهام",
+ "master.units": "الوحدات"
 }
