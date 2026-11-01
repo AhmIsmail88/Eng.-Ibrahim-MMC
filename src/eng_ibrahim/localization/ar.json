@@ -679,5 +679,18 @@
  "master.warehouses": "المخازن",
  "master.new_warehouse": "مخزن جديد",
  "err.warehouse_required": "كود المخزن واسمه مطلوبان.",
- "assets.qr": "ملصقات QR"
+ "assets.qr": "ملصقات QR",
+ "nav.notifications": "التنبيهات",
+ "notify.title": "التنبيهات",
+ "notify.severity": "الأهمية",
+ "notify.message": "التنبيه",
+ "notify.detail": "التفاصيل",
+ "notify.summary": "{critical} حرج · {warning} تحذير",
+ "notify.pm_overdue": "صيانة وقائية متأخرة",
+ "notify.pm_due": "صيانة وقائية قريبة",
+ "notify.low_stock": "مخزون تحت الحد",
+ "notify.wo_overdue": "أمر شغل تجاوز الاستحقاق",
+ "severity.critical": "حرج",
+ "severity.warning": "تحذير",
+ "severity.info": "معلومة"
 }

@@ -679,5 +679,18 @@
  "master.warehouses": "Warehouses",
  "master.new_warehouse": "New warehouse",
  "err.warehouse_required": "Warehouse code and name are required.",
- "assets.qr": "QR labels"
+ "assets.qr": "QR labels",
+ "nav.notifications": "Notifications",
+ "notify.title": "Notifications",
+ "notify.severity": "Severity",
+ "notify.message": "Alert",
+ "notify.detail": "Details",
+ "notify.summary": "{critical} critical · {warning} warning",
+ "notify.pm_overdue": "Overdue preventive maintenance",
+ "notify.pm_due": "Preventive maintenance due soon",
+ "notify.low_stock": "Low stock",
+ "notify.wo_overdue": "Work order overdue",
+ "severity.critical": "Critical",
+ "severity.warning": "Warning",
+ "severity.info": "Info"
 }
