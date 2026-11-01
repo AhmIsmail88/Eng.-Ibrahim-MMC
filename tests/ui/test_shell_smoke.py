@@ -35,7 +35,7 @@ def test_navigation_covers_all_sections(window):
 def test_sidebar_matches_spec_menu(window):
     keys = [k for k, _, _ in NAV_ITEMS]
     assert keys == ["nav.dashboard", "nav.assets", "nav.work_orders", "nav.preventive",
-                    "nav.corrective", "nav.vehicles", "nav.checklists", "nav.spare_parts",
+                    "nav.corrective", "nav.pm_calendar", "nav.vehicles", "nav.checklists", "nav.spare_parts",
                     "nav.technicians", "nav.master_data", "nav.audit", "nav.notifications", "nav.reports", "nav.users",
                     "nav.settings"]
 

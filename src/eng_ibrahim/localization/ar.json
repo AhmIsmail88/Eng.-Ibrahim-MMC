@@ -692,5 +692,14 @@
  "notify.wo_overdue": "أمر شغل تجاوز الاستحقاق",
  "severity.critical": "حرج",
  "severity.warning": "تحذير",
- "severity.info": "معلومة"
+ "severity.info": "معلومة",
+ "nav.pm_calendar": "تقويم الصيانة",
+ "cal.title": "تقويم الصيانة الوقائية",
+ "cal.dow.0": "الأحد",
+ "cal.dow.1": "الاثنين",
+ "cal.dow.2": "الثلاثاء",
+ "cal.dow.3": "الأربعاء",
+ "cal.dow.4": "الخميس",
+ "cal.dow.5": "الجمعة",
+ "cal.dow.6": "السبت"
 }

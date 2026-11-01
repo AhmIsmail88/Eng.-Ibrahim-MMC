@@ -692,5 +692,14 @@
  "notify.wo_overdue": "Work order overdue",
  "severity.critical": "Critical",
  "severity.warning": "Warning",
- "severity.info": "Info"
+ "severity.info": "Info",
+ "nav.pm_calendar": "PM calendar",
+ "cal.title": "Preventive maintenance calendar",
+ "cal.dow.0": "Sun",
+ "cal.dow.1": "Mon",
+ "cal.dow.2": "Tue",
+ "cal.dow.3": "Wed",
+ "cal.dow.4": "Thu",
+ "cal.dow.5": "Fri",
+ "cal.dow.6": "Sat"
 }
