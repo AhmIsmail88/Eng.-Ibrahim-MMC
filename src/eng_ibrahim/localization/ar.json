@@ -662,5 +662,9 @@
  "err.failure_code_required": "المجموعة والكود والاسم مطلوبة.",
  "master.new_task": "مهمة جديدة",
  "master.minutes": "المدة (دقيقة)",
- "err.task_required": "كود المهمة وعنوانها مطلوبان."
+ "err.task_required": "كود المهمة وعنوانها مطلوبان.",
+ "wo.expense.add": "إضافة مصروف",
+ "wo.expense.amount": "المبلغ",
+ "wo.expense.type": "النوع",
+ "wo.expense.notes": "ملاحظات"
 }

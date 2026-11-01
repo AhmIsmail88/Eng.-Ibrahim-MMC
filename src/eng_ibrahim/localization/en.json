@@ -662,5 +662,9 @@
  "err.failure_code_required": "Group, code and name are required.",
  "master.new_task": "New task",
  "master.minutes": "Duration (min)",
- "err.task_required": "Task code and title are required."
+ "err.task_required": "Task code and title are required.",
+ "wo.expense.add": "Add expense",
+ "wo.expense.amount": "Amount",
+ "wo.expense.type": "Type",
+ "wo.expense.notes": "Notes"
 }

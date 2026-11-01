@@ -163,6 +163,9 @@ class WorkOrdersPage(BasePage):
         right_lay.addWidget(self.tabs, 1)
 
         actions = QHBoxLayout()
+        self.btn_expense = QPushButton()
+        self.btn_expense.clicked.connect(self._add_expense)
+        actions.addWidget(self.btn_expense)
         self._buttons: dict[str, QPushButton] = {}
         for _key, _sources, target in _ACTIONS:
             btn = QPushButton()
@@ -267,6 +270,7 @@ class WorkOrdersPage(BasePage):
                                                 tr("wo.reason")])
         for key, _sources, target in _ACTIONS:
             self._buttons[target].setText(tr(key))
+        self.btn_expense.setText(tr("wo.expense.add"))
         self._reload_statuses()
         self.refresh()
 
@@ -341,6 +345,7 @@ class WorkOrdersPage(BasePage):
 
         editable = self.ctx.can_edit and d.status in (sm.DRAFT, sm.OPEN, sm.ASSIGNED,
                                                       sm.IN_PROGRESS, sm.ON_HOLD)
+        self.btn_expense.setEnabled(self.ctx.can_edit)
         self.btn_task.setEnabled(editable)
         self.btn_task_done.setEnabled(editable)
         self.btn_time.setEnabled(editable)
@@ -503,6 +508,38 @@ class WorkOrdersPage(BasePage):
         result = self.service.set_task_result(
             self.ctx.current_user, self._detail.id, task_id,
             self.ctx.tr("wo.task.done_result"), not current.is_completed)
+        self._after(result)
+
+    def _add_expense(self) -> None:
+        if self._detail is None or not self.ctx.can_edit:
+            return
+        from datetime import date
+
+        from PySide6.QtWidgets import QDoubleSpinBox
+        amount = QDoubleSpinBox()
+        amount.setMaximum(1_000_000)
+        amount.setDecimals(2)
+        kind = QComboBox()
+        for value in ("External Repair", "Transport", "Other"):
+            kind.addItem(value, value)
+        notes = QLineEdit()
+        dialog = QDialog(self)
+        dialog.setWindowTitle(self.ctx.tr("wo.expense.add"))
+        form = QFormLayout(dialog)
+        form.addRow(QLabel(self.ctx.tr("wo.expense.amount")), amount)
+        form.addRow(QLabel(self.ctx.tr("wo.expense.type")), kind)
+        form.addRow(QLabel(self.ctx.tr("wo.expense.notes")), notes)
+        box = QDialogButtonBox(QDialogButtonBox.StandardButton.Save
+                               | QDialogButtonBox.StandardButton.Cancel)
+        box.accepted.connect(dialog.accept)
+        box.rejected.connect(dialog.reject)
+        form.addRow(box)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        result = self.service.add_expense(
+            self.ctx.current_user, self._detail.id, date.today().isoformat(),
+            kind.currentData(), int(round(amount.value() * 100)),
+            notes=notes.text().strip() or None)
         self._after(result)
 
     def _add_task(self) -> None:
