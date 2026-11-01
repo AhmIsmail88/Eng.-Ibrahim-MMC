@@ -14,3 +14,4 @@ logs/
 *.eibak
 .DS_Store
 Thumbs.db
+.smoke/

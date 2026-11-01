@@ -43,6 +43,13 @@ from ..theme.manager import ThemeManager
 
 log = logging.getLogger(__name__)
 
+
+def _glyph(widget, text: str) -> str:
+    """Keep only characters the active font can draw (no tofu boxes in nav/header)."""
+    from PySide6.QtGui import QFontMetrics
+    metrics = QFontMetrics(widget.font())
+    return "".join(ch for ch in text if ch == " " or metrics.inFontUcs4(ord(ch)))
+
 # key, glyph, phase that implements it (0 = exists now)
 NAV_ITEMS: list[tuple[str, str, int]] = [
     ("nav.dashboard", "◧", 0),
@@ -120,16 +127,16 @@ class MainWindow(QMainWindow):
         self.search.setEnabled(False)  # global search arrives in a later phase (no dead controls)
         self.search.setMinimumWidth(280)
         self.btn_notifications = QToolButton()
-        self.btn_notifications.setText("🔔")
+        self.btn_notifications.setText(_glyph(self.btn_notifications, "🔔"))
         self.btn_notifications.setEnabled(False)
         self.btn_theme = QToolButton()
-        self.btn_theme.setText("◐")
+        self.btn_theme.setText(_glyph(self.btn_theme, "◐"))
         self.btn_theme.clicked.connect(self.toggle_theme)
         self.btn_settings = QToolButton()
-        self.btn_settings.setText("⚒")
+        self.btn_settings.setText(_glyph(self.btn_settings, "⚒"))
         self.btn_settings.clicked.connect(lambda: self.navigate("nav.settings"))
         self.btn_collapse = QToolButton()
-        self.btn_collapse.setText("☰")
+        self.btn_collapse.setText(_glyph(self.btn_collapse, "☰"))
         self.btn_collapse.clicked.connect(self.toggle_sidebar)
         lay.addWidget(self.btn_collapse)
         lay.addWidget(logo)
@@ -169,7 +176,11 @@ class MainWindow(QMainWindow):
         glyphs = {k: g for k, g, _ in NAV_ITEMS}
         for key, btn in self._nav_buttons.items():
             label = self.ctx.tr(key)
-            btn.setText(glyphs[key] if self._collapsed else f"{glyphs[key]}   {label}")
+            icon = _glyph(btn, glyphs[key])
+            if self._collapsed:
+                btn.setText(icon or label[:1])
+            else:
+                btn.setText(f"{icon}   {label}" if icon else label)
             btn.setToolTip(label)
             btn.setAccessibleName(label)
 
