@@ -675,5 +675,8 @@
  "wo.downtime.type": "Type",
  "value.downtime.unplanned": "Unplanned",
  "value.downtime.planned": "Planned",
- "value.downtime.external": "External"
+ "value.downtime.external": "External",
+ "master.warehouses": "Warehouses",
+ "master.new_warehouse": "New warehouse",
+ "err.warehouse_required": "Warehouse code and name are required."
 }

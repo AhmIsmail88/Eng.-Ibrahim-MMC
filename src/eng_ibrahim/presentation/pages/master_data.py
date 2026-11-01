@@ -22,7 +22,7 @@ from sqlalchemy import select
 
 from ...application.context import AppContext
 from ...application.services.master_data_service import MasterDataService
-from ...infrastructure.database.orm_models import FailureCode, MaintenanceTask, Unit
+from ...infrastructure.database.orm_models import FailureCode, MaintenanceTask, Unit, Warehouse
 from .base import BasePage, make_card, make_title, vbox
 
 
@@ -90,6 +90,17 @@ class MasterDataPage(BasePage):
         unit_lay = QVBoxLayout(unit_page)
         unit_lay.addWidget(self.unit_table)
         self.tabs.addTab(unit_page, "")
+        self.wh_table = self._table()
+        wh_page = QWidget()
+        wh_lay = QVBoxLayout(wh_page)
+        self.btn_wh = QPushButton()
+        self.btn_wh.clicked.connect(self._new_warehouse)
+        wh_bar = QHBoxLayout()
+        wh_bar.addStretch(1)
+        wh_bar.addWidget(self.btn_wh)
+        wh_lay.addWidget(self.wh_table, 1)
+        wh_lay.addLayout(wh_bar)
+        self.tabs.addTab(wh_page, "")
         card_lay.addWidget(self.tabs)
         lay.addWidget(card, 1)
 
@@ -148,6 +159,10 @@ class MasterDataPage(BasePage):
         self.tabs.setTabText(5, tr("master.units"))
         self.btn_fc.setText(tr("master.new_failure_code"))
         self.btn_task_new.setText(tr("master.new_task"))
+        self.tabs.setTabText(6, tr("master.warehouses"))
+        self.btn_wh.setText(tr("master.new_warehouse"))
+        self.wh_table.setHorizontalHeaderLabels([tr("master.code"), tr("master.name"),
+                                                tr("master.extra")])
         for table in (self.fc_table, self.task_table, self.unit_table):
             table.setHorizontalHeaderLabels([tr("master.code"), tr("master.name"),
                                              tr("master.extra")])
@@ -178,7 +193,7 @@ class MasterDataPage(BasePage):
             self.type_table.setItem(i, 0, QTableWidgetItem(code))
             self.type_table.setItem(i, 1, QTableWidgetItem(name))
             self.type_table.setItem(i, 2, QTableWidgetItem(category))
-        for btn in (self.btn_loc, self.btn_cat, self.btn_type, self.btn_fc,
+        for btn in (self.btn_loc, self.btn_cat, self.btn_type, self.btn_fc, self.btn_wh,
                     self.btn_task_new):
             btn.setEnabled(self.ctx.can_edit)
         with self.ctx.db.session() as session:
@@ -196,6 +211,13 @@ class MasterDataPage(BasePage):
                 self.task_table.setItem(i, 1, QTableWidgetItem(task.title_ar))
                 self.task_table.setItem(i, 2, QTableWidgetItem(
                     f"{task.estimated_min} min" if task.estimated_min else ""))
+            warehouses = session.scalars(select(Warehouse)
+                                         .order_by(Warehouse.warehouse_code)).all()
+            self.wh_table.setRowCount(len(warehouses))
+            for i, wh in enumerate(warehouses):
+                self.wh_table.setItem(i, 0, QTableWidgetItem(wh.warehouse_code))
+                self.wh_table.setItem(i, 1, QTableWidgetItem(wh.name_ar))
+                self.wh_table.setItem(i, 2, QTableWidgetItem(wh.name_en or "—"))
             units = session.scalars(select(Unit).order_by(Unit.code)).all()
             self.unit_table.setRowCount(len(units))
             for i, unit in enumerate(units):
@@ -255,6 +277,15 @@ class MasterDataPage(BasePage):
         result = self.service.create_failure_code(self.ctx.current_user,
                                                   group.currentText(), code.text(),
                                                   name.text())
+        self._done(result)
+
+    def _new_warehouse(self) -> None:
+        code, name = QLineEdit(), QLineEdit()
+        dialog = _Dialog(self.ctx, self.ctx.tr("master.new_warehouse"), [
+            (self.ctx.tr("master.code"), code), (self.ctx.tr("master.name"), name)], self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        result = self.service.create_warehouse(self.ctx.current_user, code.text(), name.text())
         self._done(result)
 
     def _new_task(self) -> None:

@@ -16,6 +16,7 @@ from ...infrastructure.database.orm_models import (
     Supplier,
     Technician,
     Unit,
+    Warehouse,
 )
 from ..dto.asset import Lookup
 from ..dto.result import Result
@@ -177,6 +178,25 @@ class MasterDataService:
             categories = {c.id: c.code for c in s.scalars(select(AssetCategory))}
             return [(t.id, t.code, t.name_ar, categories.get(t.category_id, "—"))
                     for t in s.scalars(select(AssetType).order_by(AssetType.code))]
+
+    def create_warehouse(self, actor: AuthUser | None, code: str, name_ar: str,
+                         name_en: str | None = None) -> Result[str]:
+        guard = _require_editor(actor)
+        if not guard.ok:
+            return Result.failure(guard.error_code or "err.permission_denied")
+        code, name = normalize_code(code), (name_ar or "").strip()
+        if not code or not name:
+            return Result.failure("err.warehouse_required")
+        with self._db.unit_of_work() as s:
+            if s.scalar(select(Warehouse.id).where(
+                    func.lower(Warehouse.warehouse_code) == code.lower())):
+                return Result.failure("err.code_exists")
+            row = Warehouse(warehouse_code=code, name_ar=name, name_en=name_en)
+            s.add(row)
+            s.flush()
+            write_audit(s, "warehouse", row.id, "warehouse_created",
+                        actor_id=actor.id if actor else None, after={"code": code})
+            return Result.success(row.id)
 
     def create_failure_code(self, actor: AuthUser | None, group_code: str, code: str,
                             name_ar: str, name_en: str | None = None) -> Result[str]:

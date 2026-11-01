@@ -675,5 +675,8 @@
  "wo.downtime.type": "النوع",
  "value.downtime.unplanned": "غير مخطط",
  "value.downtime.planned": "مخطط",
- "value.downtime.external": "خارجي"
+ "value.downtime.external": "خارجي",
+ "master.warehouses": "المخازن",
+ "master.new_warehouse": "مخزن جديد",
+ "err.warehouse_required": "كود المخزن واسمه مطلوبان."
 }
