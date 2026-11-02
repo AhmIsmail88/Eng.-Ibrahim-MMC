@@ -15,3 +15,5 @@ logs/
 .DS_Store
 Thumbs.db
 .smoke/
+.exe-smoke/
+build_pyinstaller.log
