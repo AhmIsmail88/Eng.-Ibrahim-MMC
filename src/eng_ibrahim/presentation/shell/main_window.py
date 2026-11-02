@@ -36,6 +36,7 @@ from ..pages.parts import PartsPage
 from ..pages.placeholder import PlaceholderPage
 from ..pages.pm_calendar import PMCalendarPage
 from ..pages.preventive import PMPage
+from ..pages.purchases import PurchasesPage
 from ..pages.reports import ReportsPage
 from ..pages.settings import SettingsPage
 from ..pages.suppliers import SuppliersPage
@@ -69,6 +70,7 @@ NAV_ITEMS: list[tuple[str, str, int]] = [
     ("nav.audit", "⌸", 0),
     ("nav.notifications", "◉", 0),
     ("nav.suppliers", "⌂", 1),
+    ("nav.purchases", "▣", 1),
     ("nav.reports", "▥", 5),
     ("nav.users", "☷", 0),
     ("nav.settings", "⚒", 0),
@@ -220,6 +222,8 @@ class MainWindow(QMainWindow):
                 page = TechniciansPage(self.ctx)
             elif key == "nav.suppliers":
                 page = SuppliersPage(self.ctx)
+            elif key == "nav.purchases":
+                page = PurchasesPage(self.ctx)
             elif key == "nav.master_data":
                 page = MasterDataPage(self.ctx)
             elif key == "nav.audit":

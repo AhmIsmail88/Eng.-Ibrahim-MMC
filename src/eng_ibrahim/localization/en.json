@@ -712,5 +712,19 @@
  "sup.new": "New supplier",
  "sup.code": "Code *",
  "sup.name": "Name *",
- "sup.contact": "Contact details"
+ "sup.contact": "Contact details",
+ "nav.purchases": "Purchase requests",
+ "pr.title": "Purchase requests",
+ "pr.new": "New request",
+ "pr.approve": "Approve",
+ "pr.receive": "Receive",
+ "pr.total": "Value",
+ "pr.lines": "Lines",
+ "pr.status.Draft": "Draft",
+ "pr.status.Approved": "Approved",
+ "pr.status.Received": "Received",
+ "pr.status.Cancelled": "Cancelled",
+ "err.pr_lines_required": "A request needs at least one line.",
+ "err.pr_status_invalid": "The request status does not allow this action.",
+ "err.pr_not_approved": "Approve the request before receiving."
 }

@@ -712,5 +712,19 @@
  "sup.new": "مورد جديد",
  "sup.code": "الكود *",
  "sup.name": "الاسم *",
- "sup.contact": "بيانات التواصل"
+ "sup.contact": "بيانات التواصل",
+ "nav.purchases": "طلبات الشراء",
+ "pr.title": "طلبات الشراء",
+ "pr.new": "طلب جديد",
+ "pr.approve": "اعتماد",
+ "pr.receive": "استلام",
+ "pr.total": "القيمة",
+ "pr.lines": "بنود",
+ "pr.status.Draft": "مسودة",
+ "pr.status.Approved": "معتمد",
+ "pr.status.Received": "مستلم",
+ "pr.status.Cancelled": "ملغى",
+ "err.pr_lines_required": "الطلب يحتاج بندًا واحدًا على الأقل.",
+ "err.pr_status_invalid": "حالة الطلب لا تسمح بهذا الإجراء.",
+ "err.pr_not_approved": "لا يمكن الاستلام قبل الاعتماد."
 }
