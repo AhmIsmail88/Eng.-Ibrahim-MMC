@@ -5,7 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=['src'],
     binaries=[],
-    datas=[('assets', 'assets'), ('migrations', 'migrations'), ('SPEC.md', '.')],
+    datas=[('assets', 'assets'), ('migrations', 'migrations'), ('SPEC.md', '.'), ('src/eng_ibrahim/localization', 'eng_ibrahim/localization')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
