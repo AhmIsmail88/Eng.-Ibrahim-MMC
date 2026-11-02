@@ -129,3 +129,26 @@ def test_viewer_cannot_change_state(world):
     wo_id = _new_order(orders, admin, asset_id)
     assert orders.transition(viewer, wo_id, sm.OPEN).error_code == "err.permission_denied"
     assert orders.list() and orders.list(status=sm.DRAFT)
+
+
+def test_foreign_currency_labour_is_excluded_from_cost(world):
+    _ctx, _auth, admin, masters, asset_id, _tech, orders = world
+    usd_tech = masters.create_technician(admin, "T-2", "سامي", hourly_rate_minor=1000,
+                                         currency="USD").value
+    wo_id = _new_order(orders, admin, asset_id)
+    assert orders.add_time_log(admin, wo_id, usd_tech,
+                               "2026-03-01T08:00:00Z", "2026-03-01T09:00:00Z").ok
+    cost = orders.cost(wo_id)
+    assert cost.labour_minor == 0
+    assert "labour_currency_excluded" in cost.completeness
+
+
+def test_cancelled_order_is_read_only_for_time_and_expenses(world):
+    _ctx, _auth, admin, _m, asset_id, tech_id, orders = world
+    wo_id = _new_order(orders, admin, asset_id)
+    assert orders.transition(admin, wo_id, sm.CANCELLED, reason="مكرر").ok
+    log = orders.add_time_log(admin, wo_id, tech_id,
+                              "2026-03-01T08:00:00Z", "2026-03-01T09:00:00Z")
+    assert log.error_code == "err.wo_read_only"
+    expense = orders.add_expense(admin, wo_id, "2026-03-01", "Other", 500)
+    assert expense.error_code == "err.wo_read_only"

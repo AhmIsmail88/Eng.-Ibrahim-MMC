@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import csv
 from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from openpyxl import load_workbook
@@ -19,9 +20,14 @@ from ...infrastructure.database.orm_models import (
     Part,
     Unit,
 )
+from ...infrastructure.database.orm_models.operations import (
+    CRITICALITY,
+    OPERATIONAL_STATUS,
+)
 from ..dto.result import Result
 from .audit import write_audit
 from .auth_service import AuthUser
+from .settings_service import SettingsService
 
 KINDS = {
     "assets": ("asset_code", "asset_name_ar", "category_code", "location_code"),
@@ -56,14 +62,24 @@ def _read_rows(path: Path) -> list[dict]:
             return [{k.strip(): (v or "").strip() for k, v in row.items()}
                     for row in csv.DictReader(fh)]
     book = load_workbook(path, read_only=True, data_only=True)
-    sheet = book.active
-    rows = list(sheet.iter_rows(values_only=True))
+    try:
+        rows = list(book.active.iter_rows(values_only=True))
+    finally:
+        book.close()  # read-only workbooks keep the file locked on Windows
     if not rows:
         return []
     header = [str(cell or "").strip() for cell in rows[0]]
     return [{header[i]: ("" if cell is None else str(cell).strip())
              for i, cell in enumerate(row) if i < len(header)}
             for row in rows[1:]]
+
+
+def _is_non_negative_number(value: str) -> bool:
+    try:
+        number = Decimal(value)
+    except InvalidOperation:
+        return False
+    return number.is_finite() and number >= 0
 
 
 def _require_editor(actor: AuthUser | None) -> Result[None]:
@@ -116,9 +132,16 @@ class ImportService:
                     problems.append(RowProblem(index, "category_code", "err.import_lookup"))
                 if row.get("location_code") and row["location_code"].lower() not in locations:
                     problems.append(RowProblem(index, "location_code", "err.import_lookup"))
+                if row.get("criticality") and row["criticality"] not in CRITICALITY:
+                    problems.append(RowProblem(index, "criticality", "err.import_lookup"))
+                if row.get("status") and row["status"] not in OPERATIONAL_STATUS:
+                    problems.append(RowProblem(index, "status", "err.import_lookup"))
             else:
                 if row.get("unit_code") and row["unit_code"].lower() not in units:
                     problems.append(RowProblem(index, "unit_code", "err.import_lookup"))
+                reorder = row.get("reorder_point")
+                if reorder and not _is_non_negative_number(reorder):
+                    problems.append(RowProblem(index, "reorder_point", "err.quantity_invalid"))
         valid = len(rows) - len({p.row for p in problems})
         return Result.success(ImportPreview(
             kind=kind, total=len(rows), valid=max(0, valid), problems=problems,
@@ -135,9 +158,11 @@ class ImportService:
         if data is None or not data.ok:
             return Result.failure("err.import_invalid")
         rows = [r for r in _read_rows(Path(path)) if any(v for v in r.values())]
-        currency = "EGP"
+        currency = SettingsService(self._db).get("currency_code", "EGP")
         try:
             with self._db.unit_of_work() as s:
+                # Unit codes are case-sensitive keys ('L', 'kPa'); map the file's spelling.
+                units = {u.code.lower(): u.code for u in s.scalars(select(Unit))}
                 for row in rows:
                     if kind == "assets":
                         category = s.scalar(select(AssetCategory).where(
@@ -154,7 +179,7 @@ class ImportService:
                             search_norm=normalize_search(
                                 f"{code} {row['asset_name_ar']}")))
                     else:
-                        unit = row["unit_code"].lower()
+                        unit = units[row["unit_code"].lower()]
                         code = normalize_code(row["part_code"])
                         s.add(Part(part_code=code, name_ar=row["name_ar"].strip(),
                                    unit_code=unit, precision=0,

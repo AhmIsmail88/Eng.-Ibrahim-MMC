@@ -9,7 +9,6 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QHBoxLayout,
-    QHeaderView,
     QInputDialog,
     QLabel,
     QLineEdit,
@@ -32,8 +31,12 @@ from ...application.services.inspection_service import InspectionService
 from ...application.services.master_data_service import MasterDataService
 from ...application.services.work_order_service import WorkOrderService
 from ...domain.policies import wo_state_machine as sm
-from .base import BasePage, make_card, make_title, vbox
+from ..widgets.tables import polish_table
+from .base import BasePage, make_card, make_title, select_row, vbox
 from .inspections import FillDialog
+
+# Exactly what the dashboard's "open work orders" card counts (drafts excluded).
+OPEN_STATES = (sm.OPEN, sm.ASSIGNED, sm.IN_PROGRESS, sm.ON_HOLD)
 
 # (button key, source statuses, target)
 _ACTIONS = (
@@ -109,6 +112,7 @@ class WorkOrdersPage(BasePage):
         self.masters = MasterDataService(ctx.db)
         self._rows: list = []
         self._detail: WoDetail | None = None
+        self._open_only = False
         self._build()
         self.retranslate()
 
@@ -123,8 +127,9 @@ class WorkOrdersPage(BasePage):
         self.search.setClearButtonEnabled(True)
         self.search.textChanged.connect(lambda _t: self.refresh())
         self.status = QComboBox()
-        self.status.currentIndexChanged.connect(lambda _i: self.refresh())
+        self.status.currentIndexChanged.connect(self._on_status_changed)
         self.btn_new = QPushButton()
+        self.btn_new.setObjectName("primary")
         self.btn_new.clicked.connect(self._new)
         self.btn_refresh = QPushButton()
         self.btn_refresh.clicked.connect(self.refresh)
@@ -143,7 +148,7 @@ class WorkOrdersPage(BasePage):
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.table, lambda: self.ctx.tr("common.no_data"))
         self.table.itemSelectionChanged.connect(self._on_select)
         left_lay.addWidget(self.table)
         split.addWidget(left)
@@ -170,14 +175,17 @@ class WorkOrdersPage(BasePage):
         self.btn_expense.clicked.connect(self._add_expense)
         actions.addWidget(self.btn_expense)
         self._buttons: dict[str, QPushButton] = {}
-        for _key, _sources, target in _ACTIONS:
+        # Keyed by action, not target: start, resume and reopen all lead to InProgress.
+        for key, _sources, target in _ACTIONS:
             btn = QPushButton()
             btn.clicked.connect(lambda _c=False, t=target: self._move(t))
-            self._buttons[target] = btn
+            self._buttons[key] = btn
             actions.addWidget(btn)
         right_lay.addLayout(actions)
         split.addWidget(right)
-        split.setSizes([620, 620])
+        split.setSizes([720, 520])  # the list needs room for its 7 columns
+        split.setStretchFactor(0, 3)
+        split.setStretchFactor(1, 2)
         lay.addWidget(split, 1)
 
     def _build_tasks(self) -> QWidget:
@@ -185,7 +193,7 @@ class WorkOrdersPage(BasePage):
         lay = QVBoxLayout(page)
         self.tasks = QTableWidget(0, 3)
         self.tasks.verticalHeader().setVisible(False)
-        self.tasks.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.tasks, lambda: self.ctx.tr("common.no_data"))
         self.tasks.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.btn_task = QPushButton()
         self.btn_task.clicked.connect(self._add_task)
@@ -204,7 +212,7 @@ class WorkOrdersPage(BasePage):
         lay = QVBoxLayout(page)
         self.time = QTableWidget(0, 4)
         self.time.verticalHeader().setVisible(False)
-        self.time.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.time, lambda: self.ctx.tr("common.no_data"))
         self.time.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.btn_time = QPushButton()
         self.btn_time.clicked.connect(self._add_time)
@@ -220,7 +228,7 @@ class WorkOrdersPage(BasePage):
         lay = QVBoxLayout(page)
         self.history = QTableWidget(0, 3)
         self.history.verticalHeader().setVisible(False)
-        self.history.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.history, lambda: self.ctx.tr("common.no_data"))
         self.history.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         lay.addWidget(self.history)
         return page
@@ -230,7 +238,7 @@ class WorkOrdersPage(BasePage):
         lay = QVBoxLayout(page)
         self.insp_table = QTableWidget(0, 4)
         self.insp_table.verticalHeader().setVisible(False)
-        self.insp_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.insp_table, lambda: self.ctx.tr("common.no_data"))
         self.insp_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.insp_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.btn_insp_start = QPushButton()
@@ -250,7 +258,7 @@ class WorkOrdersPage(BasePage):
         lay = QVBoxLayout(page)
         self.down_table = QTableWidget(0, 3)
         self.down_table.verticalHeader().setVisible(False)
-        self.down_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.down_table, lambda: self.ctx.tr("common.no_data"))
         self.down_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.btn_down_start = QPushButton()
         self.btn_down_start.clicked.connect(self._start_downtime)
@@ -295,10 +303,15 @@ class WorkOrdersPage(BasePage):
                                              tr("wo.time.end"), tr("wo.time.category")])
         self.history.setHorizontalHeaderLabels([tr("assets.history.at"), tr("wo.status"),
                                                 tr("wo.reason")])
-        for key, _sources, target in _ACTIONS:
-            self._buttons[target].setText(tr(key))
+        for key, _sources, _target in _ACTIONS:
+            self._buttons[key].setText(tr(key))
         self.btn_expense.setText(tr("wo.expense.add"))
         self._reload_statuses()
+        self.refresh()
+        self._render()  # the open detail pane carries translated values too
+
+    def _on_status_changed(self, _index: int) -> None:
+        self._open_only = False  # choosing a status replaces the dashboard's "open" filter
         self.refresh()
 
     def _reload_statuses(self) -> None:
@@ -312,10 +325,29 @@ class WorkOrdersPage(BasePage):
         self.status.setCurrentIndex(max(0, index))
         self.status.blockSignals(False)
 
+    def select_record(self, wo_id: str) -> bool:
+        self.search.clear()
+        self.status.setCurrentIndex(0)
+        self._open_only = False
+        self.refresh()
+        if not select_row(self.table, self._rows, wo_id):
+            return False
+        self._on_select()
+        return True
+
+    def apply_filter(self, name: str | None) -> None:
+        """'open' = everything not finished; the list is newest first already."""
+        self.search.clear()
+        self.status.setCurrentIndex(0)
+        self._open_only = name == "open"
+        self.refresh()
+
     # ---------------- data ----------------
     def refresh(self) -> None:
         self._rows = self.service.list(status=self.status.currentData(),
                                        query=self.search.text())
+        if self._open_only and self.status.currentData() is None:
+            self._rows = [r for r in self._rows if r.status in OPEN_STATES]
         self.table.setRowCount(len(self._rows))
         for i, row in enumerate(self._rows):
             cells = (row.number, row.asset_code, self.ctx.tr(f"value.wotype.{row.type}"),
@@ -347,7 +379,7 @@ class WorkOrdersPage(BasePage):
         self.meta.setText(
             f"{d.asset_code} · {self.ctx.tr(f'value.wotype.{d.type}')} · "
             f"{self.ctx.tr(f'value.wo.{d.status}')}"
-            + (f" · {cost.total_minor / 100:,.2f} {cost.currency}" if cost else ""))
+            + (f" · ⁦{cost.total_minor / 100:,.2f} {cost.currency}⁩" if cost else ""))
         self.tasks.setRowCount(len(d.tasks))
         for i, task in enumerate(d.tasks):
             first = QTableWidgetItem(f"{task.sequence}. {task.title}")
@@ -366,8 +398,12 @@ class WorkOrdersPage(BasePage):
         self.history.setRowCount(len(d.events))
         for i, event in enumerate(d.events):
             self.history.setItem(i, 0, QTableWidgetItem(event.at[:19].replace("T", " ")))
+            before = (self.ctx.tr(f"value.wo.{event.from_status}") if event.from_status
+                      else "—")
             self.history.setItem(i, 1, QTableWidgetItem(
-                f"{event.from_status or '—'} → {event.to_status}"))
+                f"{before} ← {self.ctx.tr(f'value.wo.{event.to_status}')}"
+                if self.ctx.localizer.is_rtl else
+                f"{before} → {self.ctx.tr(f'value.wo.{event.to_status}')}"))
             self.history.setItem(i, 2, QTableWidgetItem(event.reason or ""))
 
         editable = self.ctx.can_edit and d.status in (sm.DRAFT, sm.OPEN, sm.ASSIGNED,
@@ -383,8 +419,8 @@ class WorkOrdersPage(BasePage):
         self._render_downtime(d)
         allowed = set(sm.allowed_targets(d.status, self.ctx.current_user.role
                                          if self.ctx.current_user else None))
-        for _key, sources, target in _ACTIONS:
-            btn = self._buttons[target]
+        for key, sources, target in _ACTIONS:
+            btn = self._buttons[key]
             btn.setVisible(d.status in sources)
             btn.setEnabled(d.status in sources and target in allowed)
 

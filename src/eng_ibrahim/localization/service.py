@@ -28,6 +28,16 @@ def _candidates() -> list[Path]:
     return seen
 
 
+def guide_path(language: Language) -> Path:
+    """The in-app user guide (guide_ar.html / guide_en.html), found like the tables."""
+    name = f"guide_{Language(language).value}.html"
+    for root in _candidates():
+        candidate = root / name
+        if candidate.is_file():
+            return candidate
+    raise FileNotFoundError(f"user guide {name} not found")
+
+
 def table_path(language: Language) -> Path:
     name = f"{language.value}.json"
     for root in _candidates():

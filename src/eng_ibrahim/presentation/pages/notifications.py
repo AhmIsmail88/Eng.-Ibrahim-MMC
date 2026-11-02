@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import (
     QHBoxLayout,
-    QHeaderView,
     QLabel,
     QPushButton,
     QTableWidget,
@@ -12,6 +11,7 @@ from PySide6.QtWidgets import (
 
 from ...application.context import AppContext
 from ...application.services.notification_service import NotificationService
+from ..widgets.tables import polish_table
 from .base import BasePage, make_card, make_title, vbox
 
 
@@ -35,7 +35,7 @@ class NotificationsPage(BasePage):
         self.table = QTableWidget(0, 3)
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.table, lambda: self.ctx.tr("common.no_data"))
         lay.addWidget(self.table, 1)
         self.retranslate()
 

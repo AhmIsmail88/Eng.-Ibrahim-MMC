@@ -1,13 +1,11 @@
 """Dashboard: KPI cards + asset status board (SPEC 15.1, 15.1.1)."""
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
-    QGridLayout,
     QHBoxLayout,
-    QHeaderView,
     QLabel,
     QTableWidget,
     QTableWidgetItem,
@@ -17,25 +15,73 @@ from PySide6.QtWidgets import (
 from ...application.context import AppContext
 from ...application.services.dashboard_service import DashboardService
 from ...application.services.master_data_service import MasterDataService
-from .base import BasePage, make_card, make_title, set_ltr_value, vbox
+from ..widgets.tables import polish_table
+from .base import BasePage, make_card, make_title, vbox
 
 
 class _Card(QFrame):
+    """KPI tile; its `tone` (neutral/info/warning/danger) colours the accent and value.
+
+    Clicking it (or Enter/Space when focused) opens the screen behind the number.
+    """
+
+    clicked = Signal()
+
     def __init__(self) -> None:
         super().__init__()
-        self.setObjectName("card")
+        self.setObjectName("kpiCard")
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFocusPolicy(Qt.FocusPolicy.TabFocus)
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(16, 12, 16, 12)
+        lay.setContentsMargins(18, 14, 18, 14)
+        lay.setSpacing(2)
         self.value = QLabel("—")
         self.value.setObjectName("kpiValue")
-        self.value.setStyleSheet("font-size: 22pt; font-weight: 600;")
         self.caption = QLabel()
-        self.caption.setObjectName("hint")
+        self.caption.setObjectName("kpiCaption")
+        self.caption.setWordWrap(True)
         lay.addWidget(self.value)
         lay.addWidget(self.caption)
+        self.set_tone("neutral")
+
+    def mouseReleaseEvent(self, event) -> None:  # noqa: N802 - Qt API
+        if event.button() == Qt.MouseButton.LeftButton and self.rect().contains(
+                event.position().toPoint()):
+            self.clicked.emit()
+        super().mouseReleaseEvent(event)
+
+    def keyPressEvent(self, event) -> None:  # noqa: N802 - Qt API
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
+            self.clicked.emit()
+            return
+        super().keyPressEvent(event)
+
+    def set_value(self, value: int, tone: str) -> None:
+        self.value.setText(f"{value:,}")
+        self.set_tone(tone)
+
+    def set_tone(self, tone: str) -> None:
+        if self.property("tone") == tone:
+            return
+        for widget in (self, self.value):
+            widget.setProperty("tone", tone)
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
+
+
+# card attribute → (screen, filter applied on arrival)
+CARD_TARGETS = {
+    "card_assets": ("nav.assets", None),
+    "card_wos": ("nav.work_orders", "open"),
+    "card_pm_overdue": ("nav.preventive", "Overdue"),
+    "card_pm_soon": ("nav.preventive", "DueSoon"),
+    "card_low": ("nav.spare_parts", "low"),
+}
 
 
 class DashboardPage(BasePage):
+    open_requested = Signal(str, object)  # nav key, filter
+
     def __init__(self, ctx: AppContext) -> None:
         super().__init__(ctx)
         self.service = DashboardService(ctx.db)
@@ -52,8 +98,9 @@ class DashboardPage(BasePage):
         self.card_assets, self.card_wos = _Card(), _Card()
         self.card_pm_overdue, self.card_pm_soon = _Card(), _Card()
         self.card_low = _Card()
-        for card in (self.card_assets, self.card_wos, self.card_pm_overdue,
-                     self.card_pm_soon, self.card_low):
+        for name, (key, flt) in CARD_TARGETS.items():
+            card = getattr(self, name)
+            card.clicked.connect(lambda k=key, f=flt: self.open_requested.emit(k, f))
             cards.addWidget(card)
         lay.addLayout(cards)
 
@@ -61,7 +108,7 @@ class DashboardPage(BasePage):
         board_lay = QVBoxLayout(board_card)
         head = QHBoxLayout()
         self.board_title = QLabel()
-        self.board_title.setStyleSheet("font-weight: 600;")
+        self.board_title.setObjectName("sectionTitle")
         self.cat = QComboBox()
         self.cat.currentIndexChanged.connect(lambda _i: self.refresh())
         head.addWidget(self.board_title)
@@ -73,18 +120,10 @@ class DashboardPage(BasePage):
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.table, lambda: self.ctx.tr("common.no_data"))
         board_lay.addWidget(self.table, 1)
         lay.addWidget(board_card, 1)
-
-        system = QGridLayout()
-        self.db_label, self.db_value = QLabel(), QLabel()
-        self.schema_label, self.schema_value = QLabel(), QLabel()
-        system.addWidget(self.db_label, 0, 0)
-        system.addWidget(self.db_value, 0, 1)
-        system.addWidget(self.schema_label, 1, 0)
-        system.addWidget(self.schema_value, 1, 1)
-        lay.addLayout(system)
+        # Database path and schema revision live under Settings → About.
 
     def retranslate(self) -> None:
         tr = self.ctx.tr
@@ -95,13 +134,11 @@ class DashboardPage(BasePage):
         self.card_pm_overdue.caption.setText(tr("kpi.overdue_pm"))
         self.card_pm_soon.caption.setText(tr("kpi.due_soon_pm"))
         self.card_low.caption.setText(tr("kpi.low_stock"))
+        for name in CARD_TARGETS:
+            getattr(self, name).setToolTip(tr("dashboard.card_tip"))
         headers = ("board.col.asset", "board.col.category", "board.col.location",
                    "board.col.status", "board.col.fault", "board.col.repair", "board.col.wo")
         self.table.setHorizontalHeaderLabels([tr(k) for k in headers])
-        self.db_label.setText(tr("dashboard.db_path"))
-        self.schema_label.setText(tr("dashboard.schema"))
-        set_ltr_value(self.db_value, str(self.ctx.paths.db_file), self.ctx.localizer.is_rtl)
-        set_ltr_value(self.schema_value, self.ctx.schema_revision, self.ctx.localizer.is_rtl)
         self._reload_categories()
         self.refresh()
 
@@ -112,17 +149,20 @@ class DashboardPage(BasePage):
         self.cat.addItem(self.ctx.tr("board.all_categories"), None)
         for c in self.masters.categories():
             self.cat.addItem(c.label(self.ctx.localizer.is_rtl), c.code)
-        index = self.cat.findData(current) if current else self.cat.findData("PUMP")
-        self.cat.setCurrentIndex(max(0, index))
+        # Every category by default: a station without pumps must not open on an empty board.
+        self.cat.setCurrentIndex(max(0, self.cat.findData(current)) if current else 0)
         self.cat.blockSignals(False)
 
     def refresh(self) -> None:
         kpis = self.service.kpis()
-        self.card_assets.value.setText(str(kpis.total_assets))
-        self.card_wos.value.setText(str(kpis.open_work_orders))
-        self.card_pm_overdue.value.setText(str(kpis.overdue_pm))
-        self.card_pm_soon.value.setText(str(kpis.due_soon_pm))
-        self.card_low.value.setText(str(kpis.low_stock))
+        self.card_assets.set_value(kpis.total_assets, "neutral")
+        self.card_wos.set_value(kpis.open_work_orders,
+                                "info" if kpis.open_work_orders else "neutral")
+        self.card_pm_overdue.set_value(kpis.overdue_pm,
+                                       "danger" if kpis.overdue_pm else "success")
+        self.card_pm_soon.set_value(kpis.due_soon_pm,
+                                    "warning" if kpis.due_soon_pm else "neutral")
+        self.card_low.set_value(kpis.low_stock, "warning" if kpis.low_stock else "success")
 
         rows = self.service.board(self.cat.currentData())
         self.table.setRowCount(len(rows))

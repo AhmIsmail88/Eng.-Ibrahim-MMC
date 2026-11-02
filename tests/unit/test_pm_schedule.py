@@ -81,3 +81,11 @@ def test_advance_to_future_logs_missed_periods() -> None:
     assert skipped[0] == date(2026, 1, 1)
     assert nxt >= date(2026, 4, 1)
     assert all(nxt > s for s in skipped)
+
+
+def test_latest_missed_keeps_the_most_recent_due_date():
+    latest, skipped = sched.latest_missed(date(2026, 1, 1), 30, "days", date(2026, 4, 15))
+    assert latest == date(2026, 4, 1)  # due 1 Jan, 31 Jan, 2 Mar, 1 Apr
+    assert skipped == [date(2026, 1, 1), date(2026, 1, 31), date(2026, 3, 2)]
+    assert sched.latest_missed(date(2026, 4, 10), 30, "days", date(2026, 4, 15)) == (
+        date(2026, 4, 10), [])

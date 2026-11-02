@@ -14,6 +14,7 @@ APP_TAGLINE = "Reliable Equipment · Continuous Operation"
 APP_DIR_NAME = "ENG_IBRAHIM"
 APP_VERSION = __version__
 DB_FILENAME = "maintenance.sqlite3"
+DEVELOPER_LINKEDIN = "https://www.linkedin.com/in/ahmed-ismail-soliman"
 ENV_DATA_DIR = "ENG_IBRAHIM_DATA_DIR"  # override for tests / portable runs
 
 

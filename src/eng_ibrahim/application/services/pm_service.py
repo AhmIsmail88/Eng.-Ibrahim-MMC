@@ -35,8 +35,11 @@ from ..dto.result import Result
 from .audit import write_audit
 from .auth_service import AuthUser
 from .numbering import next_number, next_plain_number
+from .settings_service import SettingsService
 
 OPEN_WO_STATUSES = ("Open", "Assigned", "InProgress", "OnHold")
+AUTO_GENERATE = "pm_auto_generate_enabled"
+AUTO_LAST_RUN = "pm_auto_generate_last_run"
 
 
 def _require_editor(actor: AuthUser | None) -> Result[None]:
@@ -326,8 +329,10 @@ class PMService:
         plan = session.get(PMPlan, wo.pm_plan_id)
         if plan is None:
             return
+        if occurrence is not None and occurrence.status == "Completed":
+            return  # re-completion after a reopen: the schedule already moved on
         completed_on = sched.parse_date(wo.actual_end_at or wo.completed_at) or date.today()
-        if occurrence is not None and occurrence.status != "Completed":
+        if occurrence is not None:
             occurrence.status = "Completed"
             occurrence.completed_at = wo.completed_at or utcnow_iso()
         if plan.completion_anchor_policy == "FROM_COMPLETION":
@@ -382,9 +387,11 @@ class PMService:
                 and plan.calendar_interval_unit):
             return
         due = sched.parse_date(plan.next_due_date)
-        if due is None or due >= today:
+        if due is None or due >= today or plan.catch_up_policy == "ALL_MISSED":
             return
-        nxt, skipped = sched.advance_to_future(
+        # Older missed periods are logged as skipped; the latest one stays due so its
+        # work order can still be generated (never a silent jump into the future).
+        nxt, skipped = sched.latest_missed(
             due, plan.calendar_interval_value, plan.calendar_interval_unit, today)
         for missed in skipped:
             key = sched.due_key(plan.id, missed, None)
@@ -405,3 +412,50 @@ class PMService:
             plan.next_due_meter = str(Decimal(plan.next_due_meter)
                                       + Decimal(plan.meter_interval_value))
         plan.version = (plan.version or 1) + 1
+
+    # ---------------- automatic generation (SPEC 9.4) ----------------
+    def auto_enabled(self) -> bool:
+        return bool(SettingsService(self._db).get(AUTO_GENERATE, True))
+
+    def set_auto_enabled(self, enabled: bool) -> None:
+        SettingsService(self._db).set(AUTO_GENERATE, bool(enabled))
+
+    def auto_generate_due(self, actor: AuthUser | None,
+                          today: date | None = None) -> Result[list[str]]:
+        """Generate draft work orders for plans that are due, at most once a day.
+
+        A plan qualifies when it is Due/Overdue, or Due Soon with its date inside the
+        plan's lead window. Generation itself stays idempotent (one WO per occurrence), and
+        missed periods follow the catch-up policy instead of producing a pile of orders.
+        """
+        guard = _require_editor(actor)
+        if not guard.ok:
+            return Result.failure(guard.error_code or "err.permission_denied")
+        today = today or date.today()
+        settings = SettingsService(self._db)
+        if not self.auto_enabled() or settings.get(AUTO_LAST_RUN) == today.isoformat():
+            return Result.success([])
+        created: list[str] = []
+        for plan in self.list(status="Active"):
+            if not self._auto_qualifies(plan, today):
+                continue
+            result = self.generate(actor, plan.id)
+            if result.ok and result.value:
+                created.append(result.value)
+        settings.set(AUTO_LAST_RUN, today.isoformat())
+        return Result.success(created)
+
+    def _auto_qualifies(self, plan: PlanRow, today: date) -> bool:
+        with self._db.session() as s:
+            # A draft from an earlier run already covers this occurrence.
+            if s.scalar(select(WorkOrder.id).where(WorkOrder.pm_plan_id == plan.id,
+                                                   WorkOrder.status == "Draft")):
+                return False
+        if plan.state in (sched.DUE, sched.OVERDUE):
+            return True
+        if plan.state != sched.DUE_SOON or not plan.next_due_date:
+            return False
+        due = sched.parse_date(plan.next_due_date)
+        with self._db.session() as s:
+            lead = (s.get(PMPlan, plan.id).lead_days or 0)
+        return due is not None and (due - today).days <= lead

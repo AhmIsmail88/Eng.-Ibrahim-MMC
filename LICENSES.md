@@ -9,5 +9,7 @@
 | pydantic | MIT | |
 | pytest, pytest-qt, ruff | MIT | dev only |
 
-Fonts: none bundled yet (ADR-006). Icons: placeholder only (ADR-005).
+Fonts: **Cairo** (Regular, SemiBold, Bold) bundled in `assets/fonts/` as the UI font —
+SIL Open Font License 1.1 (Google Fonts). Ship the OFL text (`OFL.txt` from the
+Cairo family page) next to the font files before distribution. Icons: placeholder only (ADR-005).
 This table is a starting point, not legal advice; confirm each licence text at release time.

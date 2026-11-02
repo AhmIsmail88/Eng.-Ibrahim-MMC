@@ -9,10 +9,12 @@ from ...infrastructure.database.engine import Database
 from ...infrastructure.database.orm_models import (
     AssetCategory,
     AssetType,
+    Currency,
     FailureCode,
     Location,
     MaintenanceTask,
     OperatingCalendar,
+    OperatingCalendarShift,
     Supplier,
     Technician,
     Unit,
@@ -318,3 +320,118 @@ class MasterDataService:
             write_audit(s, "operating_calendar", row.id, "calendar_created",
                         actor_id=actor.id if actor else None, after={"code": code})
             return Result.success(row.id)
+
+    # ---------------- currencies (SPEC 4.4) ----------------
+    def currency_rows(self) -> list[tuple[str, str, int]]:
+        with self._db.session() as s:
+            return [(c.code, c.name, c.minor_units)
+                    for c in s.scalars(select(Currency).order_by(Currency.code))]
+
+    def create_currency(self, actor: AuthUser | None, code: str, name: str,
+                        minor_units: int = 2) -> Result[str]:
+        guard = _require_editor(actor)
+        if not guard.ok:
+            return Result.failure(guard.error_code or "err.permission_denied")
+        code, name = (code or "").strip().upper(), (name or "").strip()
+        if not (len(code) == 3 and code.isascii() and code.isalpha()):
+            return Result.failure("err.currency_code_invalid")
+        if not name:
+            return Result.failure("err.name_required")
+        if not 0 <= minor_units <= 4:
+            return Result.failure("err.currency_minor_invalid")
+        with self._db.unit_of_work() as s:
+            if s.get(Currency, code) is not None:
+                return Result.failure("err.code_exists")
+            s.add(Currency(code=code, name=name, minor_units=minor_units))
+            write_audit(s, "currency", code, "currency_created",
+                        actor_id=actor.id if actor else None, after={"code": code})
+            return Result.success(code)
+
+    # ---------------- units (SPEC 4.4) ----------------
+    def create_unit(self, actor: AuthUser | None, code: str, label_ar: str, label_en: str,
+                    dimension: str, precision: int = 2) -> Result[str]:
+        guard = _require_editor(actor)
+        if not guard.ok:
+            return Result.failure(guard.error_code or "err.permission_denied")
+        code = (code or "").strip()
+        label_ar, label_en = (label_ar or "").strip(), (label_en or "").strip()
+        dimension = (dimension or "").strip().lower()
+        if not code or len(code) > 16 or " " in code:
+            return Result.failure("err.unit_code_invalid")
+        if not label_ar or not dimension:
+            return Result.failure("err.name_required")
+        if not 0 <= precision <= 6:
+            return Result.failure("err.part_precision_invalid")
+        with self._db.unit_of_work() as s:
+            # Unit codes are case-sensitive keys ("L", "kPa") but "kpa" next to "kPa" would
+            # only confuse; refuse a case-insensitive clash.
+            if s.scalar(select(Unit.code).where(func.lower(Unit.code) == code.lower())):
+                return Result.failure("err.code_exists")
+            s.add(Unit(code=code, label_ar=label_ar, label_en=label_en or label_ar,
+                       dimension=dimension, precision=precision))
+            write_audit(s, "unit", code, "unit_created",
+                        actor_id=actor.id if actor else None, after={"code": code})
+            return Result.success(code)
+
+    # ---------------- operating calendars (SPEC 16.3) ----------------
+    def calendar_week(self, calendar_id: str) -> dict[int, tuple[str, str]]:
+        """Weekday (0 = Sunday) → first shift (start, end) in local HH:MM."""
+        with self._db.session() as s:
+            return {row.weekday: (row.start_time_local, row.end_time_local)
+                    for row in s.scalars(select(OperatingCalendarShift).where(
+                        OperatingCalendarShift.calendar_id == calendar_id,
+                        OperatingCalendarShift.shift_no == 1))}
+
+    def calendar_rows(self) -> list[tuple[str, str, str, float, int]]:
+        """(id, code, name, weekly hours, working days) for the calendars tab."""
+        rows = []
+        for cal in self.calendars(active_only=False):
+            week = self.calendar_week(cal.id)
+            hours = sum(_shift_hours(start, end) for start, end in week.values())
+            rows.append((cal.id, cal.code, cal.name_ar, round(hours, 2), len(week)))
+        return rows
+
+    def set_calendar_week(self, actor: AuthUser | None, calendar_id: str,
+                          week: dict[int, tuple[str, str]]) -> Result[None]:
+        """Replace the weekly pattern; an end at or before the start crosses midnight."""
+        guard = _require_editor(actor)
+        if not guard.ok:
+            return Result.failure(guard.error_code or "err.permission_denied")
+        for weekday, (start, end) in week.items():
+            if not 0 <= weekday <= 6 or not (_is_hhmm(start) and _is_hhmm(end)):
+                return Result.failure("err.calendar_time_invalid")
+            if start == end:
+                return Result.failure("err.calendar_time_invalid")
+        with self._db.unit_of_work() as s:
+            if s.get(OperatingCalendar, calendar_id) is None:
+                return Result.failure("err.not_found")
+            for row in s.scalars(select(OperatingCalendarShift).where(
+                    OperatingCalendarShift.calendar_id == calendar_id)):
+                s.delete(row)
+            s.flush()
+            for weekday, (start, end) in sorted(week.items()):
+                s.add(OperatingCalendarShift(
+                    calendar_id=calendar_id, weekday=weekday, shift_no=1,
+                    start_time_local=start, end_time_local=end,
+                    ends_next_day=1 if end <= start else 0))
+            write_audit(s, "operating_calendar", calendar_id, "calendar_week_set",
+                        actor_id=actor.id if actor else None,
+                        after={str(k): f"{v[0]}-{v[1]}" for k, v in sorted(week.items())})
+            return Result.success()
+
+
+def _is_hhmm(value: str) -> bool:
+    try:
+        hours, minutes = value.split(":")
+        return len(hours) == 2 and len(minutes) == 2 and 0 <= int(hours) <= 23 \
+            and 0 <= int(minutes) <= 59
+    except ValueError:
+        return False
+
+
+def _shift_hours(start: str, end: str) -> float:
+    def minutes(value: str) -> int:
+        h, m = value.split(":")
+        return int(h) * 60 + int(m)
+    span = minutes(end) - minutes(start)
+    return (span if span > 0 else span + 24 * 60) / 60

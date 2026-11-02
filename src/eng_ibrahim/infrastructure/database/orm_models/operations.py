@@ -136,6 +136,8 @@ class Vehicle(Base):
     registration_expiry: Mapped[str | None] = mapped_column(String(10))
     assigned_driver: Mapped[str | None] = mapped_column(String(120))
     odometer_unit: Mapped[str | None] = mapped_column(ForeignKey("units.code"))
+    department: Mapped[str | None] = mapped_column(String(120))
+    maintenance_contact: Mapped[str | None] = mapped_column(String(160))
 
 
 class MeterDefinition(Base, UuidPk):

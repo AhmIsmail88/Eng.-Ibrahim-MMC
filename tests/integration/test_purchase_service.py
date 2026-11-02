@@ -8,6 +8,7 @@ from eng_ibrahim.application.services.first_run_service import FirstRunInput, Fi
 from eng_ibrahim.application.services.inventory_service import InventoryService
 from eng_ibrahim.application.services.master_data_service import MasterDataService
 from eng_ibrahim.application.services.purchase_service import PurchaseService
+from eng_ibrahim.infrastructure.database.orm_models import StockBalance
 
 PASSWORD = "Admin#2026"
 
@@ -61,3 +62,18 @@ def test_validation(world):
         "err.quantity_invalid")
     assert purchases.create(admin, supplier_id, [("missing", "1", 100)]).error_code == (
         "err.part_not_found")
+
+
+def test_failed_line_rolls_back_the_whole_receipt(world):
+    ctx, admin, supplier_id, part_id, inventory, purchases = world
+    other = inventory.create_part(admin, "BRG-2", "بلي 2", "pcs").value
+    inventory.receive(admin, other, "1", 100)
+    with ctx.db.unit_of_work() as s:  # make the second line fail on currency
+        s.get(StockBalance, (other, inventory.ensure_default_warehouse())).currency_code = "USD"
+    request_id = purchases.create(admin, supplier_id, [(part_id, "2", 500), (other, "1", 10)]).value
+    purchases.approve(admin, request_id)
+
+    assert purchases.receive(admin, request_id).error_code == "err.currency_mismatch"
+    part = {p.code: p for p in inventory.list_parts()}["BRG-1"]
+    assert part.on_hand == "0"
+    assert purchases.list()[0].status == "Approved"

@@ -8,7 +8,6 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QHBoxLayout,
-    QHeaderView,
     QInputDialog,
     QLabel,
     QLineEdit,
@@ -29,6 +28,7 @@ from ...application.dto.preventive import PlanDetail
 from ...application.services.asset_service import AssetService
 from ...application.services.meter_service import MeterService
 from ...application.services.pm_service import PMService
+from ..widgets.tables import polish_table
 from .base import BasePage, make_card, make_title, vbox
 
 
@@ -150,12 +150,16 @@ class PMPage(BasePage):
         self.search.textChanged.connect(lambda _t: self.refresh())
         self.status = QComboBox()
         self.status.currentIndexChanged.connect(lambda _i: self.refresh())
+        self.due_state = QComboBox()
+        self.due_state.currentIndexChanged.connect(lambda _i: self.refresh())
         self.btn_new = QPushButton()
+        self.btn_new.setObjectName("primary")
         self.btn_new.clicked.connect(self._new)
         self.btn_refresh = QPushButton()
         self.btn_refresh.clicked.connect(self.refresh)
         bar.addWidget(self.search)
         bar.addWidget(self.status)
+        bar.addWidget(self.due_state)
         bar.addStretch(1)
         bar.addWidget(self.btn_new)
         bar.addWidget(self.btn_refresh)
@@ -169,7 +173,7 @@ class PMPage(BasePage):
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.table, lambda: self.ctx.tr("common.no_data"))
         self.table.itemSelectionChanged.connect(self._on_select)
         left_lay.addWidget(self.table)
         split.addWidget(left)
@@ -200,7 +204,9 @@ class PMPage(BasePage):
         actions.addWidget(self.btn_toggle)
         right_lay.addLayout(actions)
         split.addWidget(right)
-        split.setSizes([620, 620])
+        split.setSizes([720, 520])  # the list needs room for its 7 columns
+        split.setStretchFactor(0, 3)
+        split.setStretchFactor(1, 2)
         lay.addWidget(split, 1)
 
     def _build_tasks(self) -> QWidget:
@@ -208,7 +214,7 @@ class PMPage(BasePage):
         lay = QVBoxLayout(page)
         self.tasks = QTableWidget(0, 2)
         self.tasks.verticalHeader().setVisible(False)
-        self.tasks.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.tasks, lambda: self.ctx.tr("common.no_data"))
         self.tasks.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         lay.addWidget(self.tasks)
         return page
@@ -218,7 +224,7 @@ class PMPage(BasePage):
         lay = QVBoxLayout(page)
         self.occurrences = QTableWidget(0, 3)
         self.occurrences.verticalHeader().setVisible(False)
-        self.occurrences.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.occurrences, lambda: self.ctx.tr("common.no_data"))
         self.occurrences.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         lay.addWidget(self.occurrences)
         return page
@@ -248,12 +254,28 @@ class PMPage(BasePage):
         index = self.status.findData(current)
         self.status.setCurrentIndex(max(0, index))
         self.status.blockSignals(False)
+        current_state = self.due_state.currentData()
+        self.due_state.blockSignals(True)
+        self.due_state.clear()
+        self.due_state.addItem(tr("pm.any_state"), None)
+        for value in ("Overdue", "Due", "DueSoon", "AwaitingCompletion", "NoValidMeter"):
+            self.due_state.addItem(tr(f"pm.state.{value}"), value)
+        self.due_state.setCurrentIndex(max(0, self.due_state.findData(current_state)))
+        self.due_state.blockSignals(False)
         self.refresh()
+
+    def apply_filter(self, state: str | None) -> None:
+        """Opened from a dashboard card: show plans in that due state."""
+        self.search.clear()
+        self.status.setCurrentIndex(max(0, self.status.findData("Active")))
+        self.due_state.setCurrentIndex(max(0, self.due_state.findData(state)))
 
     # ---------------- data ----------------
     def refresh(self) -> None:
         self._rows = self.service.list(status=self.status.currentData(),
                                        query=self.search.text())
+        if self.due_state.currentData():
+            self._rows = [r for r in self._rows if r.state == self.due_state.currentData()]
         self.table.setRowCount(len(self._rows))
         for i, row in enumerate(self._rows):
             due = row.next_due_date or row.next_due_meter or "—"

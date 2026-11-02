@@ -72,3 +72,12 @@ def test_viewer_cannot_add_readings(meters):
     viewer = auth.authenticate("reader", "Reader#2026").value
     result = service.add_reading(viewer, asset_id, meter_id, "50", "2026-01-01T08:00")
     assert result.error_code == "err.permission_denied"
+
+
+def test_back_dated_reading_cannot_exceed_a_later_one(meters):
+    _ctx, _auth, admin, service, asset_id, meter_id = meters
+    assert service.add_reading(admin, asset_id, meter_id, "100", "2026-01-10T08:00").ok
+    assert service.add_reading(admin, asset_id, meter_id, "200", "2026-01-20T08:00").ok
+    high = service.add_reading(admin, asset_id, meter_id, "500", "2026-01-15T08:00")
+    assert high.error_code == "err.meter_decrease"
+    assert service.add_reading(admin, asset_id, meter_id, "150", "2026-01-15T08:00").ok

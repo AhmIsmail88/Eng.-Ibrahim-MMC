@@ -35,7 +35,7 @@ class PMCalendarPage(BasePage):
         self.btn_next = QPushButton("▶")
         self.btn_next.clicked.connect(lambda: self._shift(1))
         self.period = QLabel()
-        self.period.setStyleSheet("font-weight: 600;")
+        self.period.setObjectName("sectionTitle")
         bar.addWidget(self.btn_prev)
         bar.addWidget(self.period)
         bar.addWidget(self.btn_next)

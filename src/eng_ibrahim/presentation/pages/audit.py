@@ -4,7 +4,6 @@ from __future__ import annotations
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
-    QHeaderView,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -12,6 +11,7 @@ from PySide6.QtWidgets import (
 
 from ...application.context import AppContext
 from ...application.services.audit_view import AuditViewService
+from ..widgets.tables import polish_table
 from .base import BasePage, make_card, make_title, vbox
 
 
@@ -35,7 +35,7 @@ class AuditPage(BasePage):
         self.table = QTableWidget(0, 5)
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.table, lambda: self.ctx.tr("common.no_data"))
         lay.addWidget(self.table, 1)
         self.retranslate()
 

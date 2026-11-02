@@ -15,6 +15,7 @@ from ...domain.enums import UserRole
 from ...domain.permissions import can_edit, can_print, is_admin
 from ...infrastructure.database.engine import Database
 from ...infrastructure.database.orm_models import AppUser, LocalRecoveryCode
+from ...infrastructure.database.orm_models.base import utcnow_iso
 from ...infrastructure.security.passwords import (
     MIN_PASSWORD_LEN,
     RESET_SENTINEL,
@@ -221,6 +222,12 @@ class AuthService:
             if row is None:
                 return Result.failure("err.user_not_found")
             row.password_hash = hash_secret(new_password)
+            # Only the code handed out now stays valid.
+            now = utcnow_iso()
+            for old in s.scalars(select(LocalRecoveryCode).where(
+                    LocalRecoveryCode.user_id == row.id,
+                    LocalRecoveryCode.used_at.is_(None))):
+                old.used_at = now
             code = generate_recovery_code()
             s.add(LocalRecoveryCode(user_id=row.id, code_hash=hash_secret(code)))
             write_audit(s, "app_user", row.id, "password_reset",

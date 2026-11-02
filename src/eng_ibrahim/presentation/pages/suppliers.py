@@ -7,7 +7,6 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QHBoxLayout,
-    QHeaderView,
     QLabel,
     QLineEdit,
     QMessageBox,
@@ -19,6 +18,7 @@ from PySide6.QtWidgets import (
 
 from ...application.context import AppContext
 from ...application.services.master_data_service import MasterDataService
+from ..widgets.tables import polish_table
 from .base import BasePage, make_card, make_title, vbox
 
 
@@ -59,6 +59,7 @@ class SuppliersPage(BasePage):
         card_lay = QVBoxLayout(card)
         bar = QHBoxLayout()
         self.btn_new = QPushButton()
+        self.btn_new.setObjectName("primary")
         self.btn_new.clicked.connect(self._new)
         self.btn_toggle = QPushButton()
         self.btn_toggle.clicked.connect(self._toggle)
@@ -73,7 +74,7 @@ class SuppliersPage(BasePage):
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.table, lambda: self.ctx.tr("common.no_data"))
         card_lay.addWidget(self.table)
         lay.addWidget(card, 1)
         self.retranslate()

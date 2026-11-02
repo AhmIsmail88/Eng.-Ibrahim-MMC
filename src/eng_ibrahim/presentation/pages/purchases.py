@@ -9,7 +9,6 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFormLayout,
     QHBoxLayout,
-    QHeaderView,
     QLabel,
     QLineEdit,
     QMessageBox,
@@ -23,6 +22,7 @@ from ...application.context import AppContext
 from ...application.services.inventory_service import InventoryService
 from ...application.services.master_data_service import MasterDataService
 from ...application.services.purchase_service import PurchaseService
+from ..widgets.tables import polish_table
 from .base import BasePage, make_card, make_title, vbox
 
 
@@ -81,6 +81,7 @@ class PurchasesPage(BasePage):
         card_lay = QVBoxLayout(card)
         bar = QHBoxLayout()
         self.btn_new = QPushButton()
+        self.btn_new.setObjectName("primary")
         self.btn_new.clicked.connect(self._new)
         self.btn_approve = QPushButton()
         self.btn_approve.clicked.connect(lambda: self._act("approve"))
@@ -100,7 +101,7 @@ class PurchasesPage(BasePage):
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.table, lambda: self.ctx.tr("common.no_data"))
         card_lay.addWidget(self.table)
         lay.addWidget(card, 1)
         self.retranslate()

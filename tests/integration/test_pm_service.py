@@ -125,3 +125,61 @@ def test_meter_plan_waits_for_reading(world):
 
     MeterService(ctx.db).add_reading(admin, asset_id, meter_id, "600", "2026-05-01T08:00")
     assert pm.generate(admin, plan_id).ok
+
+
+def test_reopen_and_recomplete_does_not_advance_twice(world):
+    _ctx, admin, _m, _a, asset_id, pm, orders = world
+    plan_id = _overdue_plan(pm, admin, asset_id, completion_anchor_policy="FROM_FIXED_BASELINE")
+    wo_id = pm.generate(admin, plan_id).value
+    orders.transition(admin, wo_id, sm.OPEN)
+    orders.transition(admin, wo_id, sm.IN_PROGRESS)
+    for task in orders.detail(wo_id).tasks:
+        orders.set_task_result(admin, wo_id, task.id, "تم", True)
+    assert orders.transition(admin, wo_id, sm.COMPLETED, equipment_returned=True).ok
+    after_first = pm.detail(plan_id).next_due_date
+
+    assert orders.transition(admin, wo_id, sm.IN_PROGRESS, reason="إعادة فحص").ok
+    reopened = orders.detail(wo_id)
+    assert reopened.completed_at is None and reopened.equipment_returned_to_service is None
+    assert orders.transition(admin, wo_id, sm.COMPLETED, equipment_returned=True).ok
+    assert pm.detail(plan_id).next_due_date == after_first
+
+
+def test_auto_generation_creates_due_orders_once_a_day(world):
+    ctx, admin, _m, _a, asset_id, pm, orders = world
+    due_plan = _overdue_plan(pm, admin, asset_id)
+    pm.create(admin, asset_id=asset_id, title="بعيد", strategy="Calendar",
+              trigger_policy="DATE_ONLY", calendar_interval_value=12,
+              calendar_interval_unit="months", base_date=date.today().isoformat())
+    first = pm.auto_generate_due(admin)
+    assert first.ok and len(first.value) == 1
+    wo = orders.detail(first.value[0])
+    assert wo.type == "PM" and wo.status == "Draft"
+    assert pm.detail(due_plan).occurrences[0].wo_number == wo.number
+    # Same day: nothing more. Next day: the existing draft still covers it.
+    assert pm.auto_generate_due(admin).value == []
+    tomorrow = date.today() + timedelta(days=1)
+    assert pm.auto_generate_due(admin, today=tomorrow).value == []
+    assert len(orders.list()) == 1
+
+
+def test_auto_generation_respects_switch_and_role(world):
+    ctx, admin, _m, _a, asset_id, pm, _orders = world
+    _overdue_plan(pm, admin, asset_id)
+    pm.set_auto_enabled(False)
+    assert pm.auto_generate_due(admin).value == []
+    pm.set_auto_enabled(True)
+    assert pm.auto_generate_due(None).error_code == "err.permission_denied"
+
+
+def test_overdue_plan_off_the_period_grid_can_still_be_generated(world):
+    _ctx, admin, _m, _a, asset_id, pm, orders = world
+    # Due 75 and 45 and 15 days ago: the first two are skipped, the latest stays due.
+    plan_id = _overdue_plan(pm, admin, asset_id,
+                            base_date=(date.today() - timedelta(days=105)).isoformat())
+    result = pm.generate(admin, plan_id)
+    assert result.ok, result.error_code
+    detail = pm.detail(plan_id)
+    statuses = sorted(o.status for o in detail.occurrences)
+    assert statuses == ["Generated", "Skipped", "Skipped"]
+    assert orders.detail(result.value).due_at == (date.today() - timedelta(days=15)).isoformat()

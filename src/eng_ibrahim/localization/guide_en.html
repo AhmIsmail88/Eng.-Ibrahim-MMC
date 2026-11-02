@@ -1,0 +1,135 @@
+<html>
+<body>
+<h1>User guide</h1>
+<p>This maintenance management system runs on this computer without internet. All data is stored in your user folder on this machine, not in the program folder, so updating or reinstalling the program never deletes your data.</p>
+
+<h2>Contents</h2>
+<ol>
+<li><a href="#start">Getting started: first run and users</a></li>
+<li><a href="#master">Master data</a></li>
+<li><a href="#assets">Assets, equipment and meters</a></li>
+<li><a href="#vehicles">Vehicles workshop</a></li>
+<li><a href="#failures">Failure reports (corrective maintenance)</a></li>
+<li><a href="#wo">Work orders</a></li>
+<li><a href="#pm">Preventive maintenance</a></li>
+<li><a href="#inspections">Checklists</a></li>
+<li><a href="#parts">Spare parts and stock</a></li>
+<li><a href="#purchases">Suppliers and purchase requests</a></li>
+<li><a href="#dashboard">Dashboard and search</a></li>
+<li><a href="#reports">Reports</a></li>
+<li><a href="#backup">Backup and restore</a></li>
+<li><a href="#shortcuts">Keyboard shortcuts</a></li>
+</ol>
+
+<h2><a name="start"></a>1. Getting started: first run and users</h2>
+<p>On first run a wizard asks for the station name, base currency, the administrator account and the backup folder. Keep the <b>recovery code</b> shown at the end in a safe place.</p>
+<p>The <b>Users</b> screen (administrators only) adds accounts with four roles:</p>
+<ul>
+<li><b>Administrator</b>: everything, including users and closing/reopening work orders.</li>
+<li><b>Editor</b>: enters and edits data and runs work orders.</li>
+<li><b>View &amp; print</b>: sees data and produces reports.</li>
+<li><b>View only</b>: sees data without changing anything.</li>
+</ul>
+<p>With a single user and no password, the program opens directly without a login screen.</p>
+
+<h2><a name="master"></a>2. Master data</h2>
+<p>The <b>Master data</b> screen has one tab per reference list: locations, categories, types, failure codes, task library, units, warehouses, currencies and operating calendars.</p>
+<ul>
+<li>Start with <b>locations</b>: every asset must be in one.</li>
+<li><b>Operating calendar</b>: set working days and shift hours with “Working hours”. An end time earlier than the start is a night shift ending the next day.</li>
+</ul>
+
+<h2><a name="assets"></a>3. Assets, equipment and meters</h2>
+<ul>
+<li><b>New asset</b>: code, name, category and location are required; codes are unique.</li>
+<li>The asset profile has tabs: overview, technical data, meters, parts used, attachments and full history.</li>
+<li><b>Meters</b> (running hours, km, cycles): a new reading cannot be lower than the previous one, nor higher than a later one. Corrections are recorded as a documented correction; the original reading stays in the history.</li>
+<li><b>Import assets</b>: a CSV or Excel file with columns <code>asset_code, asset_name_ar, category_code, location_code</code>. The whole file is checked first; nothing is imported if a single row is wrong.</li>
+<li><b>QR labels</b> prints labels for the assets listed.</li>
+<li>Archive instead of delete: an archived asset leaves the lists but keeps its history.</li>
+</ul>
+
+<h2><a name="vehicles"></a>4. Vehicles workshop</h2>
+<ul>
+<li><b>New vehicle</b>: fleet code, name and location are required; the current odometer can be entered straight away.</li>
+<li><b>Record odometer</b> from the Odometer tab. Same rule as all meters: a lower value is refused.</li>
+<li><b>Service programme</b>: “Add service”, e.g. <i>every 10,000 km or every 6 months</i>, due on whichever comes first. Leave one empty to use only the other.</li>
+<li>The <b>Alerts</b> column shows due or overdue services and insurance/licence expiring within 30 days or expired.</li>
+<li>“Needs attention only” lists vehicles with an alert.</li>
+</ul>
+
+<h2><a name="failures"></a>5. Failure reports</h2>
+<p>In <b>Corrective Maint.</b> record a <b>New report</b> with the fault and priority. After investigation use <b>Convert to work order</b>; the report is linked and cannot be converted twice.</p>
+
+<h2><a name="wo"></a>6. Work orders</h2>
+<p>Life cycle:</p>
+<p><b>Draft</b> → <b>Open</b> (submit) → <b>Assigned</b> (assign a technician) → <b>In progress</b> (start) → <b>Completed</b> (complete) → <b>Closed</b> (close, administrators).</p>
+<ul>
+<li>Orders can be put <b>on hold</b> and <b>resumed</b>, or <b>cancelled</b> before work starts, with a reason.</li>
+<li><b>Complete</b> requires all mandatory tasks done and whether the equipment returned to service.</li>
+<li><b>Reopen</b> after completion or closing is for administrators, with a reason.</li>
+<li>Cost = labour hours × technician rate + parts issued + external expenses. Amounts in another currency are not added to the total, and the cost status says so.</li>
+<li><b>Closed</b> and <b>cancelled</b> orders are read-only: no tasks, time, expenses or parts.</li>
+</ul>
+
+<h2><a name="pm"></a>7. Preventive maintenance</h2>
+<ul>
+<li><b>New plan</b>: by date (every N days/weeks/months/years), by meter (every N hours/km), or both (whichever first).</li>
+<li>Plan states: not due, due soon, due, overdue, awaiting completion of its work order.</li>
+<li><b>Generate work order</b> by hand, or automatically once a day (Settings). Automatic orders are created as Draft so you can review them.</li>
+<li>If several dates were missed while the program was closed, the older ones are logged as skipped and the latest stays due — never a pile of orders at once.</li>
+<li>Completing a PM work order schedules the next date automatically.</li>
+<li><b>PM calendar</b> shows the dates by day.</li>
+</ul>
+
+<h2><a name="inspections"></a>8. Checklists</h2>
+<p>Prepare templates in <b>Checklists</b>; inside a work order use <b>Start inspection</b> and record each item. Failed items are counted in their own column.</p>
+
+<h2><a name="parts"></a>9. Spare parts and stock</h2>
+<ul>
+<li><b>Receive</b> increases stock and updates the weighted average cost.</li>
+<li><b>Issue to work order</b> reduces stock and adds the cost to the order. Quantity reserved for an order is available to that same order.</li>
+<li>A return from a work order cannot exceed what was issued to it.</li>
+<li><b>Adjust</b> and <b>Quick stock count</b> correct balances with a reason; a negative adjustment never eats reserved stock.</li>
+<li>“Low stock only” lists parts below their reorder point.</li>
+<li><b>Import parts</b>: CSV or Excel with <code>part_code, name_ar, unit_code</code> (optional <code>reorder_point</code>).</li>
+</ul>
+
+<h2><a name="purchases"></a>10. Suppliers and purchase requests</h2>
+<p>Create the request, <b>approve</b> it, and <b>receive</b> it when goods arrive: all lines enter stock together. If one line fails nothing is posted, and a request cannot be received twice.</p>
+
+<h2><a name="dashboard"></a>11. Dashboard and search</h2>
+<ul>
+<li>Click any <b>card</b> to open its list pre-filtered, e.g. “Overdue PM” opens only overdue plans.</li>
+<li>Card colours: red overdue, orange warning, green fine.</li>
+<li><b>Global search</b> (Ctrl+K or the search box at the top): assets, vehicles, work orders and parts by code, name or plate; Enter opens the result.</li>
+</ul>
+
+<h2><a name="reports"></a>12. Reports</h2>
+<p>In <b>Reports</b> choose a report and period, then <b>Preview</b> or export <b>PDF</b> / <b>Excel</b>. Available: equipment register, PM schedule, work orders register, single work order, stock balance and maintenance cost.</p>
+
+<h2><a name="backup"></a>13. Backup and restore</h2>
+<ul>
+<li>The program makes an <b>automatic backup once a day</b> and keeps the latest 10 in the backup folder (can be switched off in Settings).</li>
+<li><b>Backup now</b> at any time. Copy the backup folder to a USB drive or another computer regularly.</li>
+<li>If the last backup is older than 7 days, the status bar shows an orange warning.</li>
+<li><b>Restore from file</b> verifies the archive and takes a safety backup of your current data before replacing it. Restart the program afterwards.</li>
+</ul>
+
+<h2><a name="shortcuts"></a>14. Keyboard shortcuts</h2>
+<table border="0" cellpadding="4">
+<tr><td><b>Ctrl+K</b></td><td>Search everything</td></tr>
+<tr><td><b>Ctrl+F</b></td><td>Search this screen</td></tr>
+<tr><td><b>Ctrl+N</b></td><td>New record on this screen (or a work order)</td></tr>
+<tr><td><b>Ctrl+S</b></td><td>Save the open form</td></tr>
+<tr><td><b>F5</b></td><td>Refresh</td></tr>
+<tr><td><b>Ctrl+P / Ctrl+E</b></td><td>Reports: PDF / Excel</td></tr>
+<tr><td><b>Ctrl+L</b></td><td>Switch Arabic / English</td></tr>
+<tr><td><b>Esc</b></td><td>Close dialog / cancel</td></tr>
+<tr><td><b>F1</b></td><td>This guide</td></tr>
+</table>
+
+<h2>More help</h2>
+<p>When something goes wrong, details are in the log folder (Settings → About). To contact the developer, use the LinkedIn button in the same section.</p>
+</body>
+</html>

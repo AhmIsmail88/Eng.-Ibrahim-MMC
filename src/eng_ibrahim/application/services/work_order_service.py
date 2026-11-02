@@ -160,11 +160,14 @@ class WorkOrderService:
                 return None
             labour = 0
             missing_rate = False
+            labour_foreign = False
             for log in s.scalars(select(WorkOrderTimeLog)
                                  .where(WorkOrderTimeLog.work_order_id == wo_id)):
                 minutes = _minutes(log.start_at, log.end_at)
                 if log.hourly_rate_minor_snapshot is None:
                     missing_rate = True
+                elif log.currency and log.currency != currency:
+                    labour_foreign = True
                 else:
                     labour += int(log.hourly_rate_minor_snapshot * minutes / 60)
             external = 0
@@ -182,6 +185,8 @@ class WorkOrderService:
             parts_minor = 0
         if missing_rate:
             flags.append("labour_rate_missing")
+        if labour_foreign:
+            flags.append("labour_currency_excluded")
         if mixed:
             flags.append("mixed_currency_excluded")
         completeness = "; ".join(flags) if flags else "complete"
@@ -307,6 +312,12 @@ class WorkOrderService:
             if target == sm.CLOSED:
                 wo.closed_at = now
                 wo.closeout_notes = closeout_notes
+            if target == sm.IN_PROGRESS and before in (sm.COMPLETED, sm.CLOSED):
+                # Reopened: the previous completion/close no longer holds.
+                wo.completed_at = None
+                wo.closed_at = None
+                wo.actual_end_at = None
+                wo.equipment_returned_to_service = None
             s.add(WorkOrderStatusEvent(work_order_id=wo.id, from_status=before,
                                        to_status=target, reason=reason,
                                        actor_id=actor.id if actor else None))
@@ -399,6 +410,8 @@ class WorkOrderService:
             tech = s.get(Technician, technician_id)
             if wo is None:
                 return Result.failure("err.wo_not_found")
+            if wo.status in (sm.CLOSED, sm.CANCELLED):
+                return Result.failure("err.wo_read_only")
             if tech is None or not tech.is_active:
                 return Result.failure("err.technician_inactive")
             overlap = s.scalar(select(WorkOrderTimeLog.id).where(
@@ -431,6 +444,8 @@ class WorkOrderService:
             wo = s.get(WorkOrder, wo_id)
             if wo is None:
                 return Result.failure("err.wo_not_found")
+            if wo.status in (sm.CLOSED, sm.CANCELLED):
+                return Result.failure("err.wo_read_only")
             if supplier_id and s.get(Supplier, supplier_id) is None:
                 return Result.failure("err.not_found")
             row = WorkOrderExternalExpense(

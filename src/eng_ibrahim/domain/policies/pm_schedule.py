@@ -127,3 +127,18 @@ def advance_to_future(start: date, value: int, unit: str, today: date,
         skipped.append(current)
         current = add_interval(current, value, unit)
     return current, skipped
+
+
+def latest_missed(start: date, value: int, unit: str, today: date,
+                  limit: int = 200) -> tuple[date, list[date]]:
+    """SPEC 9.4 (8) LATEST_ONLY_AND_LOG_SKIPPED: keep the most recent due date that is
+    not after `today` and return the older missed ones to be logged as skipped."""
+    current = start
+    skipped: list[date] = []
+    while len(skipped) < limit:
+        following = add_interval(current, value, unit)
+        if following > today:
+            break
+        skipped.append(current)
+        current = following
+    return current, skipped

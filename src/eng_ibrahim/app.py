@@ -30,6 +30,7 @@ from .presentation.shell.login_dialog import LoginDialog
 from .presentation.shell.main_window import MainWindow
 from .presentation.shell.startup_error import RETRY, StartupErrorDialog
 from .presentation.theme.manager import ThemeManager
+from .presentation.widgets import dialog_shortcuts
 
 log = logging.getLogger("eng_ibrahim")
 
@@ -84,6 +85,7 @@ def run(argv: list[str] | None = None) -> int:
         QMessageBox.information(None, config.APP_NAME, boot_loc.tr("startup.already_running"))
         return 0
 
+    dialog_shortcuts.install(app)  # Ctrl+S saves the open form (SPEC 3.6)
     theme = ThemeManager(app, ThemeMode(boot_prefs.get("theme")))
     theme.apply()
 
@@ -127,7 +129,7 @@ def run(argv: list[str] | None = None) -> int:
     else:
         ctx.current_user = auth.sole_active_user()
 
-    window = MainWindow(ctx, theme)
+    window = MainWindow(ctx, theme, scheduled_jobs=True)
     window.show()
     code = app.exec()
     ctx.db.dispose()

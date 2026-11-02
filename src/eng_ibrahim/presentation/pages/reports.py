@@ -10,7 +10,6 @@ from PySide6.QtWidgets import (
     QDateEdit,
     QFileDialog,
     QHBoxLayout,
-    QHeaderView,
     QLabel,
     QMessageBox,
     QPushButton,
@@ -22,6 +21,7 @@ from PySide6.QtWidgets import (
 from ...application.context import AppContext
 from ...application.services.report_service import REPORTS, ReportResult, ReportService
 from ...application.services.work_order_service import WorkOrderService
+from ..widgets.tables import polish_table
 from ..workers.export_worker import ExportWorker
 from .base import BasePage, make_card, make_title, vbox
 
@@ -83,7 +83,7 @@ class ReportsPage(BasePage):
         self.table = QTableWidget(0, 0)
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.table, lambda: self.ctx.tr("common.no_data"))
         card_lay.addWidget(self.totals)
         card_lay.addWidget(self.table, 1)
         lay.addWidget(card, 1)

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import zipfile
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -12,6 +13,7 @@ from eng_ibrahim.application.services.auth_service import AuthService
 from eng_ibrahim.application.services.backup_service import BackupService
 from eng_ibrahim.application.services.first_run_service import FirstRunInput, FirstRunService
 from eng_ibrahim.application.services.master_data_service import MasterDataService
+from eng_ibrahim.application.services.settings_service import SettingsService
 
 PASSWORD = "Admin#2026"
 
@@ -89,3 +91,45 @@ def test_prune_keeps_newest(world, tmp_path):
     left = sorted(p.name for p in folder.glob("*.eibak"))
     assert left == ["ENG_IBRAHIM_BACKUP_2026-01-02_12001.eibak",
                     "ENG_IBRAHIM_BACKUP_2026-01-03_12002.eibak"]
+
+
+def test_two_backups_in_the_same_second_do_not_collide(world):
+    _ctx, _admin, _m, _a, service, _cat = world
+    first = service.create().value
+    second = service.create().value
+    assert first != second and first.exists() and second.exists()
+
+
+def test_backup_from_a_newer_schema_is_refused(world, paths):
+    ctx, _admin, _m, _a, _service, _cat = world
+    archive = BackupService(ctx.db, paths, "9999").create().value
+    older = BackupService(ctx.db, paths, ctx.schema_revision)
+    assert older.restore(archive).error_code == "err.backup_newer_schema"
+
+
+def test_scheduled_backup_runs_once_a_day(world):
+    _ctx, _admin, _m, _a, service, _cat = world
+    assert service.is_due() and service.is_stale()
+    first = service.run_scheduled()
+    assert first is not None and first.ok
+    assert service.run_scheduled() is None  # not due again within 24 hours
+    later = datetime.now(UTC) + timedelta(hours=25)
+    assert service.is_due(later) and not service.is_stale(later)
+    assert service.is_stale(datetime.now(UTC) + timedelta(days=8))
+
+
+def test_scheduled_backup_respects_the_switch(world):
+    _ctx, _admin, _m, _a, service, _cat = world
+    service.set_auto_enabled(False)
+    assert service.run_scheduled() is None
+    assert service.last_backup() is None
+
+
+def test_backups_go_to_the_chosen_folder_and_keep_retention(world, ctx, tmp_path):
+    _ctx, _admin, _m, _a, service, _cat = world
+    chosen = tmp_path / "my-backups"
+    SettingsService(ctx.db).set("backup_folder", str(chosen))
+    SettingsService(ctx.db).set("backup_retention", 2)
+    for _ in range(3):
+        assert service.create().ok
+    assert len(list(chosen.glob("*.eibak"))) == 2

@@ -137,6 +137,16 @@ class MeterService:
                 ).first()
                 if previous is not None and number < Decimal(previous.value_decimal):
                     return Result.failure("err.meter_decrease")
+                # A back-dated reading must not exceed the one recorded after it either.
+                following = s.scalars(
+                    select(MeterReading)
+                    .where(MeterReading.meter_id == meter_id,
+                           MeterReading.reading_at > reading_at,
+                           MeterReading.quality != "rejected")
+                    .order_by(MeterReading.reading_at.asc()).limit(1)
+                ).first()
+                if following is not None and number > Decimal(following.value_decimal):
+                    return Result.failure("err.meter_decrease")
             row = MeterReading(
                 asset_id=asset_id, meter_id=meter_id, value_decimal=str(number),
                 reading_at=reading_at, entered_at=utcnow_iso(), source="manual",
@@ -153,7 +163,8 @@ class MeterService:
     def latest(self, meter_id: str) -> Decimal | None:
         with self._db.session() as s:
             row = s.scalars(select(MeterReading)
-                            .where(MeterReading.meter_id == meter_id)
+                            .where(MeterReading.meter_id == meter_id,
+                                   MeterReading.quality != "rejected")
                             .order_by(MeterReading.reading_at.desc()).limit(1)).first()
             return Decimal(row.value_decimal) if row else None
 

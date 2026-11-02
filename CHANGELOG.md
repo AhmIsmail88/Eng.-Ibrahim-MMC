@@ -1,5 +1,34 @@
 # Changelog
 
+## Unreleased
+- **Vehicles workshop (UI-007, SPEC 6):** fleet list with odometer, next service and
+  document alerts; vehicle profile; odometer readings (same no-decrease rule as any
+  cumulative meter); service programmes "every N km OR M months, whichever first" built on
+  the PM engine; work history and new work order from the vehicle. Migration 0009 adds
+  `department` and `maintenance_contact` to `vehicles`.
+- **Master data (SPEC 3.8):** Currencies and Operating Calendars tabs (weekly working hours,
+  night shifts across midnight); "New unit" on the Units tab.
+- **Automatic PM generation (SPEC 9.4):** due plans get a Draft work order once a day
+  (switch in Settings); the lead window applies to "due soon" plans.
+- **Global search (Ctrl+K):** assets, vehicles, work orders and parts in one dialog; the
+  chosen record opens on its screen. Ctrl+F still searches the current screen.
+- **Dashboard:** KPI cards open the matching list pre-filtered; the status board shows every
+  category by default; PM screen gained a due-state filter.
+- **Fix:** an overdue plan whose missed date was not exactly today jumped into the future on
+  catch-up and could not be generated; now only older periods are skipped (SPEC 9.4 §8).
+- **Parts import:** CSV/XLSX import button on the Spare Parts screen (shared import flow).
+- **Automatic backup (SPEC 23):** daily backup off the UI thread, honours the backup folder
+  and retention chosen in the wizard, switch in Settings, status-bar warning after 7 days.
+- **Keyboard shortcuts (SPEC 3.6):** Ctrl+N, Ctrl+S (save open form), Ctrl+K/Ctrl+F,
+  Ctrl+P, Ctrl+E, Ctrl+L, F1 (shortcut list).
+- **UI:** Cairo bundled as the UI font (bundled fonts were never picked up before); SVG
+  icons; content-aware table columns with empty states; scrollable forms; coloured KPI
+  cards; fixed blank work-order/backup buttons and stale translations.
+- **Fixes:** reservations vs. issues, atomic purchase receipt, import of mixed-case units,
+  read-only closed work orders, foreign-currency labour, PM double advance on reopen,
+  back-dated meter readings, safer restore (WAL/SHM, attachments, newer schema).
+- Missing runtime dependencies declared: qrcode, Pillow, openpyxl, xlsxwriter.
+
 ## 0.11.0 — Packaging assets (Phase 7)
 - `installer/installer.iss` (Inno Setup 6): per-user install, shortcuts, official icon,
   no `[UninstallDelete]` for user data.

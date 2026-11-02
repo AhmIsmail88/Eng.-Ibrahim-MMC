@@ -1,4 +1,4 @@
-; ENG. IBRAHIM — Inno Setup 6 script (SPEC 26.6)
+﻿; ENG. IBRAHIM — Inno Setup 6 script (SPEC 26.6)
 ; Build the app first: scripts\build_windows.ps1
 #define MyAppName "ENG. IBRAHIM"
 #define MyAppVersion "0.10.0"
@@ -18,6 +18,7 @@ OutputBaseFilename=ENG_IBRAHIM_Installer_{#MyAppVersion}_x64
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+ShowLanguageDialog=auto
 SetupIconFile=..\assets\icons\ENG_IBRAHIM_Icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 ArchitecturesAllowed=x64compatible
@@ -29,10 +30,18 @@ CloseApplications=yes
 RestartApplications=no
 
 [Languages]
+; Arabic and English, chosen from the Windows display language (the app itself is AR/EN).
+Name: "arabic"; MessagesFile: "compiler:Languages\Arabic.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+[CustomMessages]
+arabic.DesktopIconTask=إنشاء اختصار على سطح المكتب
+arabic.ShortcutsGroup=الاختصارات:
+english.DesktopIconTask=Create a desktop shortcut
+english.ShortcutsGroup=Shortcuts:
+
 [Tasks]
-Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:DesktopIconTask}"; GroupDescription: "{cm:ShortcutsGroup}"; Flags: unchecked
 
 [Files]
 ; Standalone build output. The database and attachments are NEVER installed here:
@@ -44,7 +53,7 @@ Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
 ; Intentionally empty: uninstalling must not delete user data (SPEC 26.6).

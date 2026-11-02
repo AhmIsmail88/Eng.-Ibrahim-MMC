@@ -128,3 +128,41 @@ def test_viewer_cannot_post_movements(world):
     viewer = auth.authenticate("ro", "Reader#2026").value
     assert inv.receive(viewer, part_id, "1", 10).error_code == "err.permission_denied"
     assert inv.issue_to_wo(viewer, part_id, wo_id, "1").error_code == "err.permission_denied"
+
+
+def test_reserved_stock_can_be_issued_to_its_own_work_order(world):
+    _ctx, _auth, admin, _m, _a, _o, inventory, _asset, wo_id, part_id = world
+    inventory.receive(admin, part_id, "5", 100)
+    assert inventory.reserve(admin, part_id, wo_id, "5").ok
+    assert inventory.issue_to_wo(admin, part_id, wo_id, "5").ok
+    row = {p.id: p for p in inventory.list_parts()}[part_id]
+    assert row.on_hand == "0" and row.reserved == "0"
+
+
+def test_partial_issue_keeps_the_rest_reserved_and_releasable(world):
+    _ctx, _auth, admin, _m, _a, _o, inventory, _asset, wo_id, part_id = world
+    inventory.receive(admin, part_id, "10", 100)
+    reservation = inventory.reserve(admin, part_id, wo_id, "4").value
+    assert inventory.issue_to_wo(admin, part_id, wo_id, "1").ok
+    row = {p.id: p for p in inventory.list_parts()}[part_id]
+    assert row.on_hand == "9" and row.reserved == "3"
+    assert inventory.release(admin, reservation).ok
+    row = {p.id: p for p in inventory.list_parts()}[part_id]
+    assert row.reserved == "0" and row.available == "9"
+
+
+def test_cancelled_work_order_takes_no_parts(world):
+    _ctx, _auth, admin, _m, _a, orders, inventory, asset_id, _wo, part_id = world
+    inventory.receive(admin, part_id, "5", 100)
+    wo_id = orders.create(admin, asset_id, "CM", "ملغي").value
+    assert orders.transition(admin, wo_id, sm.CANCELLED, reason="خطأ").ok
+    assert inventory.issue_to_wo(admin, part_id, wo_id, "1").error_code == "err.wo_read_only"
+    assert inventory.reserve(admin, part_id, wo_id, "1").error_code == "err.wo_read_only"
+
+
+def test_negative_adjustment_cannot_eat_reserved_stock(world):
+    _ctx, _auth, admin, _m, _a, _o, inventory, _asset, wo_id, part_id = world
+    inventory.receive(admin, part_id, "5", 100)
+    inventory.reserve(admin, part_id, wo_id, "4")
+    assert inventory.adjust(admin, part_id, "-2", "جرد").error_code == "err.stock_insufficient"
+    assert inventory.adjust(admin, part_id, "-1", "جرد").ok

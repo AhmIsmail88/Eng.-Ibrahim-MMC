@@ -11,7 +11,7 @@ import sqlite3
 import tempfile
 import zipfile
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from pathlib import Path
 
@@ -21,9 +21,16 @@ from ...config import APP_VERSION, AppPaths
 from ...infrastructure.database.engine import Database
 from ...infrastructure.database.orm_models import BackupHistory
 from ..dto.result import Result
+from .settings_service import SettingsService
 
 MANIFEST = "manifest.json"
 ARCHIVE_FORMAT = 1
+BACKUP_FOLDER = "backup_folder"
+BACKUP_RETENTION = "backup_retention"
+AUTO_BACKUP = "auto_backup_enabled"
+DEFAULT_RETENTION = 10
+AUTO_INTERVAL = timedelta(hours=24)
+STALE_AFTER = timedelta(days=7)
 
 
 def _sha256(path: Path) -> str:
@@ -60,12 +67,69 @@ class BackupService:
         self._paths = paths
         self._schema = schema_revision
 
+    # ---------------- settings ----------------
+    def folder(self) -> Path:
+        """The folder chosen in the first-run wizard, else the default under DATA_ROOT."""
+        chosen = SettingsService(self._db).get(BACKUP_FOLDER)
+        return Path(chosen) if chosen else self._paths.backups
+
+    def retention(self) -> int:
+        try:
+            return max(1, int(SettingsService(self._db).get(BACKUP_RETENTION, DEFAULT_RETENTION)))
+        except (TypeError, ValueError):
+            return DEFAULT_RETENTION
+
+    def auto_enabled(self) -> bool:
+        return bool(SettingsService(self._db).get(AUTO_BACKUP, True))
+
+    def set_auto_enabled(self, enabled: bool) -> None:
+        SettingsService(self._db).set(AUTO_BACKUP, bool(enabled))
+
+    # ---------------- schedule ----------------
+    def age(self, now: datetime | None = None) -> timedelta | None:
+        """Time since the last successful backup, or None when there has never been one."""
+        last = self.last_backup()
+        if not last:
+            return None
+        try:
+            stamp = datetime.fromisoformat(last.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        if stamp.tzinfo is None:
+            stamp = stamp.replace(tzinfo=UTC)
+        return (now or datetime.now(UTC)) - stamp
+
+    def is_due(self, now: datetime | None = None) -> bool:
+        age = self.age(now)
+        return age is None or age >= AUTO_INTERVAL
+
+    def is_stale(self, now: datetime | None = None) -> bool:
+        """Worth a warning in the status bar: never backed up, or not for a week."""
+        age = self.age(now)
+        return age is None or age >= STALE_AFTER
+
+    def run_scheduled(self, now: datetime | None = None) -> Result[Path] | None:
+        """Daily automatic backup (SPEC 23). Returns None when nothing was due."""
+        if not self.auto_enabled() or not self.is_due(now):
+            return None
+        return self.create()
+
     # ---------------- create ----------------
     def create(self, destination: Path | None = None) -> Result[Path]:
-        backups = Path(destination) if destination else self._paths.backups
+        """Write an archive; a backup into the regular folder also applies retention."""
+        result = self._create(Path(destination) if destination else self.folder())
+        if result.ok and destination is None:
+            self.prune(keep=self.retention(), directory=self.folder())
+        return result
+
+    def _create(self, backups: Path) -> Result[Path]:
         backups.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         target = backups / f"ENG_IBRAHIM_BACKUP_{stamp}.eibak"
+        suffix = 2
+        while target.exists():  # two backups in the same second must not overwrite
+            target = backups / f"ENG_IBRAHIM_BACKUP_{stamp}_{suffix}.eibak"
+            suffix += 1
         tmp_zip = target.with_suffix(".zip.tmp")
         try:
             with tempfile.TemporaryDirectory() as tmp:
@@ -106,7 +170,7 @@ class BackupService:
                             rel = file.relative_to(self._paths.root).as_posix()
                             zf.write(file, rel)
             tmp_zip.replace(target)
-        except OSError as exc:
+        except (OSError, sqlite3.Error) as exc:
             tmp_zip.unlink(missing_ok=True)
             return self._fail(str(exc))
         self._record(target, "success")
@@ -114,7 +178,7 @@ class BackupService:
 
     def prune(self, keep: int = 10, directory: Path | None = None) -> int:
         """Keep the newest `keep` archives; never delete the last successful one."""
-        folder = Path(directory) if directory else self._paths.backups
+        folder = Path(directory) if directory else self.folder()
         if keep < 1 or not folder.exists():
             return 0
         # Names embed the creation timestamp (YYYY-MM-DD_HHMMSS), so name order is
@@ -177,9 +241,14 @@ class BackupService:
         checked = self.verify(archive)
         if not checked.ok:
             return checked
-        safety = self.create(self._paths.backups / "pre-restore")
+        revision = str((checked.value or {}).get("schema_revision", ""))
+        if self._schema and revision and revision > self._schema:
+            return Result.failure("err.backup_newer_schema", revision)
+        safety = self.create(self.folder() / "pre-restore")
         if not safety.ok:
             return Result.failure("err.backup_safety_failed")
+        live = self._paths.attachments
+        parked = live.with_name(live.name + ".pre-restore")
         try:
             self._db.dispose()
             with tempfile.TemporaryDirectory() as tmp:
@@ -187,13 +256,30 @@ class BackupService:
                     zf.extractall(tmp)
                 stage = Path(tmp)
                 self._paths.data.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(stage / "data/maintenance.sqlite3", self._paths.db_file)
-                attachments = stage / "attachments"
-                if self._paths.attachments.exists():
-                    shutil.rmtree(self._paths.attachments)
-                if attachments.exists():
-                    shutil.copytree(attachments, self._paths.attachments)
+                # Stage the attachments beside the live folder before touching anything,
+                # so a failed copy leaves the current files in place.
+                incoming = live.with_name(live.name + ".restoring")
+                if incoming.exists():
+                    shutil.rmtree(incoming)
+                if (stage / "attachments").exists():
+                    shutil.copytree(stage / "attachments", incoming)
+                else:
+                    incoming.mkdir(parents=True)
+                db_file = self._paths.db_file
+                # Stale WAL/SHM pages from the old database would be replayed into the new one.
+                for side in (db_file.with_name(db_file.name + "-wal"),
+                             db_file.with_name(db_file.name + "-shm")):
+                    side.unlink(missing_ok=True)
+                shutil.copy2(stage / "data/maintenance.sqlite3", db_file)
+                if parked.exists():
+                    shutil.rmtree(parked)
+                if live.exists():
+                    live.rename(parked)
+                incoming.rename(live)
+                shutil.rmtree(parked, ignore_errors=True)
         except OSError as exc:
+            if parked.exists() and not live.exists():
+                parked.rename(live)
             return self._fail(str(exc))
         return Result.success()
 

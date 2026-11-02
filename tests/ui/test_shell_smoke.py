@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QApplication
 from eng_ibrahim.application.services.auth_service import AuthService
 from eng_ibrahim.application.services.first_run_service import FirstRunInput, FirstRunService
 from eng_ibrahim.domain.enums import ThemeMode
+from eng_ibrahim.presentation.pages.placeholder import PlaceholderPage
 from eng_ibrahim.presentation.shell.first_run_wizard import FirstRunWizard
 from eng_ibrahim.presentation.shell.main_window import NAV_ITEMS, MainWindow
 from eng_ibrahim.presentation.theme.manager import ThemeManager, build_qss
@@ -61,9 +62,28 @@ def test_theme_toggle_persists_and_changes_stylesheet(window, ctx):
     assert ctx.prefs.get("theme") == "light"
 
 
-def test_no_dead_controls_search_and_bell_disabled(window):
-    assert not window.search.isEnabled() and not window.btn_notifications.isEnabled()
+def test_no_dead_controls_in_the_shell(window):
+    # Unbuilt features are hidden rather than shown disabled; search now works.
+    assert window.search.isVisible() and window.search.isReadOnly()
+    assert all(not isinstance(p, PlaceholderPage) for p in window._pages.values())
     assert window.btn_theme.isEnabled() and window.btn_settings.isEnabled()
+    window.btn_notifications.click()
+    assert window.current_key() == "nav.notifications"
+
+
+def test_nav_and_header_buttons_have_icons(window):
+    for btn in window._nav_buttons.values():
+        assert not btn.icon_label.pixmap().isNull()
+    for btn in (window.btn_collapse, window.btn_notifications, window.btn_theme,
+                window.btn_settings):
+        assert not btn.icon().isNull() and btn.toolTip()
+
+
+def test_collapsed_sidebar_keeps_icons_and_tooltips(window):
+    window.toggle_sidebar()
+    button = window._nav_buttons["nav.assets"]
+    assert not button.text_label.isVisible() and button.toolTip()
+    window.toggle_sidebar()
 
 
 def test_status_bar_shows_real_state(window):

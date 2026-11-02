@@ -15,7 +15,7 @@ from ..config import project_root
 
 log = logging.getLogger(__name__)
 
-PREFERRED = ["Noto Sans Arabic", "Segoe UI", "Tahoma", "Inter", "Arial"]
+PREFERRED = ["Cairo", "Noto Sans Arabic", "Segoe UI", "Tahoma", "Inter", "Arial"]
 
 
 def bundled_font_families() -> list[str]:
@@ -34,8 +34,11 @@ def bundled_font_families() -> list[str]:
 
 def resolve_ui_family() -> str | None:
     """Return the first preferred family that exists, else the first system family."""
+    # Register bundled fonts *before* listing families, or a font that is only bundled
+    # (not installed on this machine) is never found.
+    bundled = bundled_font_families()
     available = set(QFontDatabase.families())
-    for family in bundled_font_families() + PREFERRED:
+    for family in PREFERRED + bundled:
         if family in available:
             return family
     if available:

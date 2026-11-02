@@ -54,7 +54,7 @@ class FirstRunWizard(QDialog):
         self.stack = QStackedWidget()
         lay.addWidget(self.stack, 1)
         self.error = QLabel()
-        self.error.setStyleSheet("color: #E04752; font-weight: 600;")
+        self.error.setObjectName("errorText")
         self.error.setWordWrap(True)
         lay.addWidget(self.error)
         nav = QHBoxLayout()

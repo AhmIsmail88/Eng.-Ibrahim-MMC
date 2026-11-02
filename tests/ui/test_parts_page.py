@@ -66,3 +66,23 @@ def test_asset_parts_tab_shows_issued_part(qtbot, ctx, paths):
     assert page.parts_table.rowCount() == 1
     assert "FLT-11" in page.parts_table.item(0, 0).text()
     assert page.parts_table.item(0, 4).text() == "سيد"
+
+
+def test_parts_can_be_imported_from_the_parts_screen(qtbot, ctx, paths, tmp_path, monkeypatch):
+    from PySide6.QtWidgets import QFileDialog, QMessageBox
+    _seed(ctx, paths)
+    sheet = tmp_path / "parts.csv"
+    sheet.write_text("part_code,name_ar,unit_code\nOIL-15W40,زيت محرك,L\nFLT-9,فلتر,pcs\n",
+                     encoding="utf-8")
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **k: (str(sheet), ""))
+    monkeypatch.setattr(QMessageBox, "question",
+                        lambda *a, **k: QMessageBox.StandardButton.Yes)
+    shown: list[str] = []
+    monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: shown.append(a[2]))
+    monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: shown.append("WARN " + a[2]))
+    page = PartsPage(ctx)
+    qtbot.addWidget(page)
+    page._import()
+    assert shown and not shown[0].startswith("WARN")
+    assert {p.code for p in InventoryService(ctx.db).list_parts()} == {"OIL-15W40", "FLT-9"}
+    assert page.table.rowCount() == 2

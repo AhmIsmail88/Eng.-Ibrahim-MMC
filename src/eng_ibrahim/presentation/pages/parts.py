@@ -10,7 +10,6 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFormLayout,
     QHBoxLayout,
-    QHeaderView,
     QLabel,
     QLineEdit,
     QMessageBox,
@@ -28,7 +27,9 @@ from ...application.services.inventory_service import InventoryService
 from ...application.services.master_data_service import MasterDataService
 from ...application.services.work_order_service import WorkOrderService
 from ...domain.policies import wo_state_machine as sm
-from .base import BasePage, make_card, make_title, vbox
+from ..widgets.import_flow import run_import
+from ..widgets.tables import polish_table
+from .base import BasePage, make_card, make_title, select_row, vbox
 
 
 class NewPartDialog(QDialog):
@@ -158,6 +159,7 @@ class PartsPage(BasePage):
         self.low_only = QCheckBox()
         self.low_only.stateChanged.connect(lambda _s: self.refresh())
         self.btn_new = QPushButton()
+        self.btn_new.setObjectName("primary")
         self.btn_new.clicked.connect(self._new_part)
         self.btn_receive = QPushButton()
         self.btn_receive.clicked.connect(self._receive)
@@ -167,13 +169,15 @@ class PartsPage(BasePage):
         self.btn_adjust.clicked.connect(self._adjust)
         self.btn_count = QPushButton()
         self.btn_count.clicked.connect(self._stock_count)
+        self.btn_import = QPushButton()
+        self.btn_import.clicked.connect(self._import)
         self.btn_refresh = QPushButton()
         self.btn_refresh.clicked.connect(self.refresh)
         bar.addWidget(self.search)
         bar.addWidget(self.low_only)
         bar.addStretch(1)
         for btn in (self.btn_new, self.btn_receive, self.btn_issue, self.btn_adjust,
-                    self.btn_count, self.btn_refresh):
+                    self.btn_count, self.btn_import, self.btn_refresh):
             bar.addWidget(btn)
         lay.addLayout(bar)
 
@@ -185,7 +189,7 @@ class PartsPage(BasePage):
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.table, lambda: self.ctx.tr("common.no_data"))
         table_lay.addWidget(self.table)
         split.addWidget(table_card)
 
@@ -194,7 +198,7 @@ class PartsPage(BasePage):
         self.moves = QTableWidget(0, 5)
         self.moves.verticalHeader().setVisible(False)
         self.moves.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.moves.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.moves, lambda: self.ctx.tr("common.no_data"))
         history_lay.addWidget(self.moves)
         split.addWidget(history_card)
         split.setSizes([420, 240])
@@ -210,6 +214,8 @@ class PartsPage(BasePage):
         self.btn_issue.setText(tr("parts.issue"))
         self.btn_adjust.setText(tr("parts.adjust"))
         self.btn_count.setText(tr("parts.count"))
+        self.btn_import.setText(tr("parts.import"))
+        self.btn_import.setToolTip(tr("parts.import_hint"))
         self.btn_refresh.setText(tr("common.refresh"))
         self.table.setHorizontalHeaderLabels([tr(k) for k in (
             "parts.code", "parts.name", "parts.on_hand", "parts.reserved",
@@ -218,7 +224,14 @@ class PartsPage(BasePage):
             "parts.movement", "parts.date", "parts.type", "parts.quantity", "parts.value")])
         self.refresh()
 
+    def _unit_label(self, code: str) -> str:
+        unit = self._units.get(code)
+        if unit is None:
+            return code
+        return (unit.name_ar if self.ctx.localizer.is_rtl else unit.name_en) or code
+
     def refresh(self) -> None:
+        self._units = {u.code: u for u in self.masters.units()}
         self._rows = self.inventory.list_parts(query=self.search.text(),
                                                low_only=self.low_only.isChecked())
         self.table.setRowCount(len(self._rows))
@@ -226,7 +239,7 @@ class PartsPage(BasePage):
             cells = (part.code, part.name(self.ctx.localizer.is_rtl), part.on_hand,
                      part.reserved, part.available,
                      f"{part.average_cost_minor / 100:,.2f} {part.currency}",
-                     part.unit_code)
+                     self._unit_label(part.unit_code))
             for col, text in enumerate(cells):
                 item = QTableWidgetItem(text)
                 if col == 0:
@@ -252,11 +265,29 @@ class PartsPage(BasePage):
             self.moves.setItem(i, 0, QTableWidgetItem(move.number))
             self.moves.setItem(i, 1, QTableWidgetItem(move.posted_at[:16].replace("T", " ")))
             self.moves.setItem(i, 2, QTableWidgetItem(self.ctx.tr(f"parts.type.{move.type}")))
-            self.moves.setItem(i, 3, QTableWidgetItem(f"{move.quantity} {part.unit_code if part else ''}"))
+            self.moves.setItem(i, 3, QTableWidgetItem(
+                f"{move.quantity} {self._unit_label(part.unit_code) if part else ''}"))
             self.moves.setItem(i, 4, QTableWidgetItem(
                 f"{move.total_minor / 100:,.2f} {move.currency}"))
 
+    def select_record(self, part_id: str) -> bool:
+        self.search.clear()
+        self.low_only.setChecked(False)
+        self.refresh()
+        if not select_row(self.table, self._rows, part_id):
+            return False
+        self._reload_moves()
+        return True
+
+    def apply_filter(self, name: str | None) -> None:
+        self.search.clear()
+        self.low_only.setChecked(name == "low")
+
     # ---------------- commands ----------------
+    def _import(self) -> None:
+        if run_import(self, self.ctx, "parts", self.ctx.tr("parts.import")):
+            self.refresh()
+
     def _new_part(self) -> None:
         if not self.ctx.can_edit:
             return
@@ -321,7 +352,7 @@ class PartsPage(BasePage):
             self.ctx.tr("parts.code"), self.ctx.tr("parts.on_hand"),
             self.ctx.tr("parts.counted")])
         table.verticalHeader().setVisible(False)
-        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(table, lambda: self.ctx.tr("common.no_data"))
         for row, part in enumerate(self._rows):
             code = QTableWidgetItem(part.code)
             code.setFlags(code.flags() & ~Qt.ItemFlag.ItemIsEditable)

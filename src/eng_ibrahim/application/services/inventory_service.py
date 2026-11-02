@@ -31,6 +31,7 @@ from .numbering import next_number
 from .settings_service import SettingsService
 
 DEFAULT_WAREHOUSE_CODE = "MAIN"
+WO_READ_ONLY = ("Closed", "Cancelled")
 
 
 def _require_editor(actor: AuthUser | None) -> Result[None]:
@@ -57,6 +58,9 @@ class InventoryService:
     def __init__(self, db: Database) -> None:
         self._db = db
         self._settings = SettingsService(db)
+
+    def default_currency(self) -> str:
+        return self._settings.get("currency_code", "EGP")
 
     # ---------------- warehouses ----------------
     def ensure_default_warehouse(self) -> str:
@@ -180,29 +184,38 @@ class InventoryService:
             return Result.failure("err.cost_negative")
         currency = currency or self._settings.get("currency_code", "EGP")
         with self._db.unit_of_work() as s:
-            part = s.get(Part, part_id)
-            if part is None:
-                return Result.failure("err.part_not_found")
-            warehouse_id = warehouse_id or self._default_warehouse_id(s)
-            balance = self._balance(s, part_id, warehouse_id, currency)
-            if balance.currency_code != currency:
-                return Result.failure("err.currency_mismatch")
-            total = _money(qty * Decimal(unit_cost_minor))
-            old_qty = _d(balance.on_hand_decimal) or Decimal(0)
-            old_value = Decimal(balance.inventory_value_minor)
-            new_qty = old_qty + qty
-            new_value = old_value + total
-            balance.on_hand_decimal = str(new_qty)
-            balance.inventory_value_minor = int(new_value)
-            balance.average_unit_cost_precise = str(
-                (new_value / new_qty).quantize(Decimal("0.000001")))
-            movement = self._movement(
-                s, part_id, warehouse_id, "RECEIPT", qty, qty, unit_cost_minor, total,
-                currency, actor, supplier_id=supplier_id, purchase_ref=purchase_ref)
-            write_audit(s, "stock_movement", movement.id, "stock_received",
-                        actor_id=actor.id if actor else None,
-                        after={"part": part.part_code, "qty": str(qty)})
-            return Result.success(movement.id)
+            return self.receive_in(s, actor, part_id, qty, unit_cost_minor, currency,
+                                   warehouse_id=warehouse_id, supplier_id=supplier_id,
+                                   purchase_ref=purchase_ref)
+
+    def receive_in(self, s, actor: AuthUser | None, part_id: str, qty: Decimal,
+                   unit_cost_minor: int, currency: str, warehouse_id: str | None = None,
+                   supplier_id: str | None = None,
+                   purchase_ref: str | None = None) -> Result[str]:
+        """Post a receipt inside the caller's transaction (validated qty/cost)."""
+        part = s.get(Part, part_id)
+        if part is None:
+            return Result.failure("err.part_not_found")
+        warehouse_id = warehouse_id or self._default_warehouse_id(s)
+        balance = self._balance(s, part_id, warehouse_id, currency)
+        if balance.currency_code != currency:
+            return Result.failure("err.currency_mismatch")
+        total = _money(qty * Decimal(unit_cost_minor))
+        old_qty = _d(balance.on_hand_decimal) or Decimal(0)
+        old_value = Decimal(balance.inventory_value_minor)
+        new_qty = old_qty + qty
+        new_value = old_value + total
+        balance.on_hand_decimal = str(new_qty)
+        balance.inventory_value_minor = int(new_value)
+        balance.average_unit_cost_precise = str(
+            (new_value / new_qty).quantize(Decimal("0.000001")))
+        movement = self._movement(
+            s, part_id, warehouse_id, "RECEIPT", qty, qty, unit_cost_minor, total,
+            currency, actor, supplier_id=supplier_id, purchase_ref=purchase_ref)
+        write_audit(s, "stock_movement", movement.id, "stock_received",
+                    actor_id=actor.id if actor else None,
+                    after={"part": part.part_code, "qty": str(qty)})
+        return Result.success(movement.id)
 
     def issue_to_wo(self, actor: AuthUser | None, part_id: str, wo_id: str,
                     quantity: str, warehouse_id: str | None = None,
@@ -220,13 +233,17 @@ class InventoryService:
                 return Result.failure("err.wo_not_found")
             if part is None:
                 return Result.failure("err.part_not_found")
+            if wo.status in WO_READ_ONLY:
+                return Result.failure("err.wo_read_only")
             warehouse_id = warehouse_id or self._default_warehouse_id(s)
             balance = s.get(StockBalance, (part_id, warehouse_id))
             if balance is None:
                 return Result.failure("err.stock_insufficient")
             on_hand = _d(balance.on_hand_decimal) or Decimal(0)
             reserved = _d(balance.reserved_decimal) or Decimal(0)
-            if on_hand - reserved < qty:
+            # Stock held for this very work order is available to it.
+            own = self._reserved_for(s, part_id, warehouse_id, wo_id)
+            if on_hand - reserved + own < qty:
                 return Result.failure("err.stock_insufficient")
             average = _d(balance.average_unit_cost_precise) or Decimal(0)
             unit = _money(average)
@@ -264,6 +281,9 @@ class InventoryService:
             issued = _d(issue.quantity_decimal) or Decimal(0)
             if qty > issued - returned:
                 return Result.failure("err.return_exceeds_issue")
+            wo = s.get(WorkOrder, issue.wo_id) if issue.wo_id else None
+            if wo is not None and wo.status in WO_READ_ONLY:
+                return Result.failure("err.wo_read_only")
             balance = s.get(StockBalance, (issue.part_id, issue.warehouse_id))
             if balance is None:
                 return Result.failure("err.part_not_found")
@@ -303,7 +323,8 @@ class InventoryService:
             if balance is None:
                 return Result.failure("err.part_not_found")
             on_hand = _d(balance.on_hand_decimal) or Decimal(0)
-            if on_hand + delta < 0:
+            reserved = _d(balance.reserved_decimal) or Decimal(0)
+            if on_hand + delta < (reserved if delta < 0 else 0):
                 return Result.failure("err.stock_insufficient")
             average = _d(balance.average_unit_cost_precise) or Decimal(0)
             unit = _money(average)
@@ -333,6 +354,11 @@ class InventoryService:
         if qty is None or qty <= 0:
             return Result.failure("err.quantity_invalid")
         with self._db.unit_of_work() as s:
+            wo = s.get(WorkOrder, wo_id)
+            if wo is None:
+                return Result.failure("err.wo_not_found")
+            if wo.status in WO_READ_ONLY:
+                return Result.failure("err.wo_read_only")
             warehouse_id = warehouse_id or self._default_warehouse_id(s)
             balance = s.get(StockBalance, (part_id, warehouse_id))
             if balance is None:
@@ -450,19 +476,39 @@ class InventoryService:
         return movement
 
     @staticmethod
-    def _consume_reservation(session, part_id: str, warehouse_id: str, wo_id: str,
-                             qty: Decimal) -> None:
-        row = session.scalars(select(StockReservation).where(
+    def _active_reservations(session, part_id: str, warehouse_id: str,
+                             wo_id: str) -> list[StockReservation]:
+        return list(session.scalars(select(StockReservation).where(
             StockReservation.part_id == part_id,
             StockReservation.warehouse_id == warehouse_id,
             StockReservation.wo_id == wo_id,
-            StockReservation.status == "active").limit(1)).first()
-        if row is None:
-            return
+            StockReservation.status == "active").order_by(StockReservation.id)))
+
+    @classmethod
+    def _reserved_for(cls, session, part_id: str, warehouse_id: str, wo_id: str) -> Decimal:
+        return sum((_d(r.quantity_decimal) or Decimal(0)
+                    for r in cls._active_reservations(session, part_id, warehouse_id, wo_id)),
+                   Decimal(0))
+
+    @classmethod
+    def _consume_reservation(cls, session, part_id: str, warehouse_id: str, wo_id: str,
+                             qty: Decimal) -> None:
+        """Draw `qty` down from this WO's reservations; a partial draw keeps the rest active."""
+        remaining = qty
+        consumed = Decimal(0)
+        for row in cls._active_reservations(session, part_id, warehouse_id, wo_id):
+            if remaining <= 0:
+                break
+            reserved_qty = _d(row.quantity_decimal) or Decimal(0)
+            used = min(remaining, reserved_qty)
+            remaining -= used
+            consumed += used
+            if used < reserved_qty:
+                row.quantity_decimal = str(reserved_qty - used)
+            else:
+                row.status = "consumed"
+                row.released_at = utcnow_iso()
         balance = session.get(StockBalance, (part_id, warehouse_id))
-        reserved_qty = _d(row.quantity_decimal) or Decimal(0)
-        if balance is not None:
+        if balance is not None and consumed:
             reserved = _d(balance.reserved_decimal) or Decimal(0)
-            balance.reserved_decimal = str(max(Decimal(0), reserved - min(qty, reserved_qty)))
-        row.status = "consumed"
-        row.released_at = utcnow_iso()
+            balance.reserved_decimal = str(max(Decimal(0), reserved - consumed))

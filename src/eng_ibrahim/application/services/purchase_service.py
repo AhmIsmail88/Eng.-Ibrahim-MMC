@@ -35,6 +35,12 @@ def _qty(value) -> Decimal | None:
     return number if number > 0 else None
 
 
+class _Abort(Exception):
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
 @dataclass(frozen=True)
 class RequestRow:
     id: str
@@ -126,34 +132,31 @@ class PurchaseService:
         guard = _require_editor(actor)
         if not guard.ok:
             return Result.failure(guard.error_code or "err.permission_denied")
-        with self._db.session() as s:
-            request = s.get(PurchaseRequest, request_id)
-            if request is None:
-                return Result.failure("err.not_found")
-            if request.status != "Approved":
-                return Result.failure("err.pr_not_approved")
-            supplier_id = request.supplier_id
-            number = request.request_no
-            lines = [(line.part_id, line.quantity_decimal, line.estimated_cost_minor)
-                     for line in s.scalars(select(PurchaseRequestLine)
-                                           .where(PurchaseRequestLine.request_id == request_id))]
         inventory = InventoryService(self._db)
-        received = 0
-        for part_id, quantity, cost_minor in lines:
-            result = inventory.receive(actor, part_id, quantity, cost_minor,
-                                       warehouse_id=warehouse_id,
-                                       supplier_id=supplier_id, purchase_ref=number)
-            if not result.ok:
-                return Result.failure(result.error_code or "err.stock_insufficient")
-            received += 1
-        return self._finish(request_id, received)
-
-    def _finish(self, request_id: str, received: int) -> Result[int]:
-        with self._db.unit_of_work() as s:
-            row = s.get(PurchaseRequest, request_id)
-            if row is None:
-                return Result.failure("err.not_found")
-            row.status = "Received"
-            write_audit(s, "purchase_request", row.id, "pr_received",
-                        after={"lines": received})
-            return Result.success(received)
+        currency = inventory.default_currency()
+        try:
+            # One transaction for every line and the status flip: a failing line
+            # rolls the whole receipt back, and a second click finds "Received".
+            with self._db.unit_of_work() as s:
+                request = s.get(PurchaseRequest, request_id)
+                if request is None:
+                    return Result.failure("err.not_found")
+                if request.status != "Approved":
+                    return Result.failure("err.pr_not_approved")
+                received = 0
+                for line in s.scalars(select(PurchaseRequestLine)
+                                      .where(PurchaseRequestLine.request_id == request_id)):
+                    result = inventory.receive_in(
+                        s, actor, line.part_id, Decimal(line.quantity_decimal),
+                        line.estimated_cost_minor, currency, warehouse_id=warehouse_id,
+                        supplier_id=request.supplier_id, purchase_ref=request.request_no)
+                    if not result.ok:
+                        raise _Abort(result.error_code or "err.stock_insufficient")
+                    received += 1
+                request.status = "Received"
+                write_audit(s, "purchase_request", request.id, "pr_received",
+                            actor_id=actor.id if actor else None,
+                            after={"lines": received})
+                return Result.success(received)
+        except _Abort as exc:
+            return Result.failure(exc.code)

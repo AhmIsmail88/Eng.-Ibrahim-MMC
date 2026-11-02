@@ -16,7 +16,6 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QFormLayout,
     QHBoxLayout,
-    QHeaderView,
     QInputDialog,
     QLabel,
     QLineEdit,
@@ -47,7 +46,9 @@ from ...infrastructure.database.orm_models.operations import (
     STRATEGY,
 )
 from ...infrastructure.exports.qr_labels import write_sheet
-from .base import BasePage, make_card, make_title, set_ltr_value, vbox
+from ..widgets.import_flow import run_import
+from ..widgets.tables import polish_table
+from .base import BasePage, isolate, make_card, make_title, scrollable, select_row, vbox
 
 
 class AssetDialog(QDialog):
@@ -350,6 +351,7 @@ class AssetsPage(BasePage):
         self.archived = QCheckBox()
         self.archived.stateChanged.connect(lambda _s: self.refresh())
         self.btn_new = QPushButton()
+        self.btn_new.setObjectName("primary")
         self.btn_new.clicked.connect(self._new)
         self.btn_import = QPushButton()
         self.btn_import.clicked.connect(self._import)
@@ -374,7 +376,7 @@ class AssetsPage(BasePage):
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.verticalHeader().setVisible(False)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.table, lambda: self.ctx.tr("common.no_data"))
         self.table.itemSelectionChanged.connect(self._on_select)
         self.table.currentCellChanged.connect(lambda *_a: self._on_select())
         left_lay.addWidget(self.table)
@@ -414,26 +416,33 @@ class AssetsPage(BasePage):
     def _build_overview(self) -> QWidget:
         page = QWidget()
         form = QFormLayout(page)
+        form.setContentsMargins(12, 12, 12, 12)
+        form.setHorizontalSpacing(24)
+        form.setVerticalSpacing(8)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignLeading | Qt.AlignmentFlag.AlignVCenter)
         self.ov: dict[str, QLabel] = {}
         for key in ("code", "name_ar", "name_en", "category", "type", "location", "parent",
                     "criticality", "status", "condition", "strategy", "manufacturer",
                     "model", "serial", "commissioning", "purchase_date", "purchase_cost",
                     "replacement_cost", "warranty", "notes"):
             label = QLabel()
+            label.setObjectName("fieldLabel")
             value = QLabel("—")
             value.setWordWrap(True)
+            value.setAlignment(Qt.AlignmentFlag.AlignLeading | Qt.AlignmentFlag.AlignVCenter)
             value.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             self.ov[key] = value
             form.addRow(label, value)
             setattr(self, f"ovl_{key}", label)
-        return page
+        return scrollable(page)
 
     def _build_technical(self) -> QWidget:
         page = QWidget()
         lay = QVBoxLayout(page)
         self.specs = QTableWidget(0, 2)
         self.specs.verticalHeader().setVisible(False)
-        self.specs.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.specs, lambda: self.ctx.tr("common.no_data"))
         self.specs.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.btn_spec = QPushButton()
         self.btn_spec.clicked.connect(self._add_spec)
@@ -449,7 +458,7 @@ class AssetsPage(BasePage):
         lay = QVBoxLayout(page)
         self.meter_table = QTableWidget(0, 4)
         self.meter_table.verticalHeader().setVisible(False)
-        self.meter_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.meter_table, lambda: self.ctx.tr("common.no_data"))
         self.meter_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.btn_reading = QPushButton()
         self.btn_reading.clicked.connect(self._add_reading)
@@ -465,7 +474,7 @@ class AssetsPage(BasePage):
         lay = QVBoxLayout(page)
         self.parts_table = QTableWidget(0, 7)
         self.parts_table.verticalHeader().setVisible(False)
-        self.parts_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.parts_table, lambda: self.ctx.tr("common.no_data"))
         self.parts_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         lay.addWidget(self.parts_table)
         return page
@@ -475,7 +484,7 @@ class AssetsPage(BasePage):
         lay = QVBoxLayout(page)
         self.attach_table = QTableWidget(0, 3)
         self.attach_table.verticalHeader().setVisible(False)
-        self.attach_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.attach_table, lambda: self.ctx.tr("common.no_data"))
         self.attach_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         bar = QHBoxLayout()
         self.btn_attach = QPushButton()
@@ -494,7 +503,7 @@ class AssetsPage(BasePage):
         lay = QVBoxLayout(page)
         self.history = QTableWidget(0, 3)
         self.history.verticalHeader().setVisible(False)
-        self.history.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.history, lambda: self.ctx.tr("common.no_data"))
         self.history.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         lay.addWidget(self.history)
         return page
@@ -580,6 +589,21 @@ class AssetsPage(BasePage):
         if index >= 0:
             combo.setCurrentIndex(index)
 
+    def select_record(self, asset_id: str) -> bool:
+        """Global search: show this asset whatever filters were set."""
+        self.search.clear()
+        self.cat.setCurrentIndex(0)
+        self.status.setCurrentIndex(0)
+        self.archived.setChecked(False)
+        self.refresh()
+        if not select_row(self.table, self._rows, asset_id):
+            self.archived.setChecked(True)
+            self.refresh()
+            if not select_row(self.table, self._rows, asset_id):
+                return False
+        self._on_select()
+        return True
+
     # ---------------- data ----------------
     def refresh(self) -> None:
         self._apply_filter()
@@ -640,8 +664,14 @@ class AssetsPage(BasePage):
             "replacement_cost": self._money(d.replacement_cost_minor, d.currency_code),
             "warranty": d.warranty_expiry or "—", "notes": d.notes or "—",
         }
+        # Absolute alignment: QLabel would otherwise follow each value's own direction and
+        # push codes and "—" to the far side of an Arabic form.
+        side = (Qt.AlignmentFlag.AlignRight if self.ctx.localizer.is_rtl
+                else Qt.AlignmentFlag.AlignLeft)
         for key, text in values.items():
-            set_ltr_value(self.ov[key], text, self.ctx.localizer.is_rtl)
+            self.ov[key].setText(isolate(text))
+            self.ov[key].setAlignment(Qt.AlignmentFlag.AlignAbsolute | side
+                                      | Qt.AlignmentFlag.AlignVCenter)
         self.btn_archive.setText(tr("assets.archive" if d.is_active else "assets.restore"))
         self.btn_edit.setEnabled(self.ctx.can_edit)
         self.btn_archive.setEnabled(self.ctx.can_edit)
@@ -768,44 +798,8 @@ class AssetsPage(BasePage):
                                 self.ctx.tr("reports.saved", path=path))
 
     def _import(self) -> None:
-        if not self.ctx.can_edit:
-            QMessageBox.warning(self, self.ctx.tr("assets.import"),
-                                self.ctx.tr("err.permission_denied"))
-            return
-        path, _f = QFileDialog.getOpenFileName(
-            self, self.ctx.tr("assets.import"), "",
-            "Excel / CSV (*.xlsx *.csv)")
-        if not path:
-            return
-        preview = self.importer.preview("assets", Path(path))
-        if not preview.ok:
-            QMessageBox.warning(self, self.ctx.tr("assets.import"),
-                                self.ctx.tr(preview.error_code or "err.import_failed"))
-            return
-        data = preview.value
-        if data is None:
-            return
-        if not data.ok:
-            detail = "\n".join(f"{p.row}: {self.ctx.tr(p.message)}"
-                               for p in data.problems[:8])
-            QMessageBox.warning(
-                self, self.ctx.tr("assets.import"),
-                self.ctx.tr("import.problems", valid=data.valid, total=data.total,
-                            detail=detail))
-            return
-        answer = QMessageBox.question(
-            self, self.ctx.tr("assets.import"),
-            self.ctx.tr("import.confirm", valid=data.valid))
-        if answer != QMessageBox.StandardButton.Yes:
-            return
-        result = self.importer.commit(self.ctx.current_user, "assets", Path(path))
-        if not result.ok:
-            QMessageBox.warning(self, self.ctx.tr("assets.import"),
-                                self.ctx.tr(result.error_code or "err.import_failed"))
-            return
-        QMessageBox.information(self, self.ctx.tr("assets.import"),
-                                self.ctx.tr("import.done", count=result.value))
-        self.refresh()
+        if run_import(self, self.ctx, "assets", self.ctx.tr("assets.import")):
+            self.refresh()
 
     def _new(self) -> None:
         if not self.ctx.can_edit:

@@ -8,7 +8,6 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QHBoxLayout,
-    QHeaderView,
     QLabel,
     QLineEdit,
     QMessageBox,
@@ -24,6 +23,7 @@ from PySide6.QtWidgets import (
 from ...application.context import AppContext
 from ...application.services.asset_service import AssetService
 from ...application.services.inspection_service import InspectionService
+from ..widgets.tables import polish_table
 from .base import BasePage, make_card, make_title, vbox
 
 _CHOICES = {
@@ -142,12 +142,11 @@ class InspectionsPage(BasePage):
         templates_card = make_card()
         t_lay = QVBoxLayout(templates_card)
         self.templates_title = QLabel()
-        self.templates_title.setStyleSheet("font-weight: 600;")
+        self.templates_title.setObjectName("sectionTitle")
         self.template_table = QTableWidget(0, 3)
         self.template_table.verticalHeader().setVisible(False)
         self.template_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.template_table.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.Stretch)
+        polish_table(self.template_table, lambda: self.ctx.tr("common.no_data"))
         self.btn_template = QPushButton()
         self.btn_template.clicked.connect(self._new_template)
         t_lay.addWidget(self.templates_title)
@@ -158,13 +157,13 @@ class InspectionsPage(BasePage):
         runs_card = make_card()
         r_lay = QVBoxLayout(runs_card)
         self.runs_title = QLabel()
-        self.runs_title.setStyleSheet("font-weight: 600;")
+        self.runs_title.setObjectName("sectionTitle")
         self.table = QTableWidget(0, 5)
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.table, lambda: self.ctx.tr("common.no_data"))
         actions = QHBoxLayout()
         self.btn_start = QPushButton()
         self.btn_start.clicked.connect(self._start)

@@ -2,7 +2,7 @@
 
 ## Prerequisites
 - Windows 10/11 x64, Python 3.12/3.13 x64, Inno Setup 6 (only for the installer).
-- `pip install -r requirements.lock` (PySide6, SQLAlchemy, Alembic, argon2, xlsxwriter, openpyxl).
+- `pip install -r requirements.lock` (PySide6, SQLAlchemy, Alembic, argon2, xlsxwriter, openpyxl, qrcode, Pillow).
 
 ## Build
 ```powershell
@@ -33,4 +33,6 @@
 
 ## Known gaps (1.0)
 - No code signing certificate by default.
-- Installer is not localized; the application itself is AR/EN.
+- Installer is Arabic/English (picked from the Windows display language).
+- Signing: set `ENG_IBRAHIM_SIGN_CERT` (.pfx) and `ENG_IBRAHIM_SIGN_PASSWORD`; both build
+  scripts then sign the EXE and the installer via `scripts/sign.ps1` (needs the Windows SDK).

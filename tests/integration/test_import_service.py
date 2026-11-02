@@ -74,3 +74,20 @@ def test_parts_import(world):
     path = tmp_path / "parts.csv"
     path.write_text("part_code,name_ar,unit_code\nBRG-1,بلي,pcs\n", encoding="utf-8")
     assert service.commit(admin, "parts", path).value == 1
+
+
+def test_parts_import_keeps_unit_code_case(world):
+    _ctx, admin, service, tmp_path = world
+    path = tmp_path / "parts.csv"
+    path.write_text("part_code,name_ar,unit_code\nOIL-1,زيت,l\nGAU-1,مانومتر,KPA\n",
+                    encoding="utf-8")
+    assert service.commit(admin, "parts", path).value == 2
+
+
+def test_asset_import_validates_criticality(world):
+    _ctx, _admin, service, tmp_path = world
+    path = tmp_path / "bad.csv"
+    path.write_text(HEADER.strip() + ",criticality\nPMP-9,مضخة,PUMP,MAIN,Urgent\n",
+                    encoding="utf-8")
+    preview = service.preview("assets", path).value
+    assert any(p.field == "criticality" for p in preview.problems)

@@ -175,46 +175,50 @@ class AssetService:
             return Result.failure(guard.error_code or "err.permission_denied")
         try:
             with self._db.unit_of_work() as s:
-                error = self._validate(s, data)
-                if error:
-                    return Result.failure(error)
-                code = normalize_code(data.asset_code)
-                if s.scalar(select(Asset.id).where(
-                        func.lower(func.trim(Asset.asset_code)) == code.lower())):
-                    return Result.failure("err.asset_code_exists")
-                row = Asset(
-                    asset_code=code,
-                    asset_name_ar=data.asset_name_ar.strip(),
-                    asset_name_en=(data.asset_name_en or "").strip() or None,
-                    category_id=data.category_id, type_id=data.type_id,
-                    location_id=data.location_id, parent_asset_id=data.parent_asset_id,
-                    operating_calendar_id=data.operating_calendar_id,
-                    manufacturer=data.manufacturer, model=data.model,
-                    serial_number=data.serial_number, criticality=data.criticality,
-                    operational_status=data.operational_status,
-                    asset_condition=data.asset_condition,
-                    maintenance_strategy=data.maintenance_strategy,
-                    meter_type=data.meter_type, default_meter_unit=data.default_meter_unit,
-                    commissioning_date=data.commissioning_date,
-                    purchase_date=data.purchase_date,
-                    purchase_cost_minor=data.purchase_cost_minor,
-                    replacement_cost_minor=data.replacement_cost_minor,
-                    currency_code=data.currency_code,
-                    warranty_expiry=data.warranty_expiry, notes=data.notes,
-                    search_norm=self._norm(data),
-                )
-                s.add(row)
-                s.flush()
-                s.add(AssetStatusHistory(asset_id=row.id, old_status=None,
-                                         new_status=row.operational_status,
-                                         reason="created",
-                                         actor_id=actor.id if actor else None))
-                write_audit(s, "asset", row.id, "asset_created",
-                            actor_id=actor.id if actor else None,
-                            after={"code": code, "name": row.asset_name_ar})
-                return Result.success(row.id)
+                return self.create_in(s, actor, data)
         except IntegrityError:
             return Result.failure("err.asset_code_exists")
+
+    def create_in(self, s, actor: AuthUser | None, data: AssetInput) -> Result[str]:
+        """Create inside the caller's transaction (used for composite records: vehicles)."""
+        error = self._validate(s, data)
+        if error:
+            return Result.failure(error)
+        code = normalize_code(data.asset_code)
+        if s.scalar(select(Asset.id).where(
+                func.lower(func.trim(Asset.asset_code)) == code.lower())):
+            return Result.failure("err.asset_code_exists")
+        row = Asset(
+            asset_code=code,
+            asset_name_ar=data.asset_name_ar.strip(),
+            asset_name_en=(data.asset_name_en or "").strip() or None,
+            category_id=data.category_id, type_id=data.type_id,
+            location_id=data.location_id, parent_asset_id=data.parent_asset_id,
+            operating_calendar_id=data.operating_calendar_id,
+            manufacturer=data.manufacturer, model=data.model,
+            serial_number=data.serial_number, criticality=data.criticality,
+            operational_status=data.operational_status,
+            asset_condition=data.asset_condition,
+            maintenance_strategy=data.maintenance_strategy,
+            meter_type=data.meter_type, default_meter_unit=data.default_meter_unit,
+            commissioning_date=data.commissioning_date,
+            purchase_date=data.purchase_date,
+            purchase_cost_minor=data.purchase_cost_minor,
+            replacement_cost_minor=data.replacement_cost_minor,
+            currency_code=data.currency_code,
+            warranty_expiry=data.warranty_expiry, notes=data.notes,
+            search_norm=self._norm(data),
+        )
+        s.add(row)
+        s.flush()
+        s.add(AssetStatusHistory(asset_id=row.id, old_status=None,
+                                 new_status=row.operational_status,
+                                 reason="created",
+                                 actor_id=actor.id if actor else None))
+        write_audit(s, "asset", row.id, "asset_created",
+                    actor_id=actor.id if actor else None,
+                    after={"code": code, "name": row.asset_name_ar})
+        return Result.success(row.id)
 
     def update(self, actor: AuthUser | None, asset_id: str, data: AssetInput) -> Result[None]:
         guard = _require_editor(actor)

@@ -9,7 +9,6 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QHBoxLayout,
-    QHeaderView,
     QInputDialog,
     QLabel,
     QLineEdit,
@@ -26,6 +25,7 @@ from ...application.context import AppContext
 from ...application.services.asset_service import AssetService
 from ...application.services.failure_service import FailureService
 from ...application.services.work_order_service import WorkOrderService
+from ..widgets.tables import polish_table
 from .base import BasePage, make_card, make_title, vbox
 
 
@@ -94,6 +94,7 @@ class FailuresPage(BasePage):
         self.status = QComboBox()
         self.status.currentIndexChanged.connect(lambda _i: self.refresh())
         self.btn_new = QPushButton()
+        self.btn_new.setObjectName("primary")
         self.btn_new.clicked.connect(self._new)
         self.btn_refresh = QPushButton()
         self.btn_refresh.clicked.connect(self.refresh)
@@ -111,7 +112,7 @@ class FailuresPage(BasePage):
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        polish_table(self.table, lambda: self.ctx.tr("common.no_data"))
         self.table.itemSelectionChanged.connect(self._sync_buttons)
         self.table.currentCellChanged.connect(lambda *_a: self._sync_buttons())
         card_lay.addWidget(self.table, 1)
