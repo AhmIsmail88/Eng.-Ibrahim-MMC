@@ -17,3 +17,4 @@ Thumbs.db
 .smoke/
 .exe-smoke/
 build_pyinstaller.log
+shot_debug.txt
