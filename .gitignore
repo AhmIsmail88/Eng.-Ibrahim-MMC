@@ -18,3 +18,8 @@ Thumbs.db
 .exe-smoke/
 build_pyinstaller.log
 shot_debug.txt
+*.spec
+build2.log
+build2.err
+.exe-check/
+.smoke2/
