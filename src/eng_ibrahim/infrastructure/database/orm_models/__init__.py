@@ -42,6 +42,7 @@ from .preventive import (  # noqa: F401
     PMPlan,
     PMPlanTask,
 )
+from .purchase import PurchaseRequest, PurchaseRequestLine  # noqa: F401
 from .reference import (  # noqa: F401
     AssetCategory,
     AssetType,
