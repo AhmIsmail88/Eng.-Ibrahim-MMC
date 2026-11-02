@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont, QGuiApplication
+from PySide6.QtGui import QColor, QFont, QGuiApplication, QPalette
 from PySide6.QtWidgets import QApplication
 
 from ...domain.enums import ThemeMode
@@ -42,7 +42,53 @@ QLabel#dbOk {{ color: {success}; font-weight: 600; }}
 QLabel#dbBad {{ color: {danger}; font-weight: 600; }}
 QCheckBox {{ spacing: 8px; }}
 QToolTip {{ background: {navy}; color: #fff; border: 1px solid {border}; padding: 4px; }}
+QTableWidget, QTableView, QTreeView, QListWidget, QPlainTextEdit, QTextEdit {{
+    background: {surface}; color: {text}; alternate-background-color: {bg};
+    gridline-color: {border}; border: 1px solid {border}; border-radius: 10px;
+    selection-background-color: {blue}; selection-color: {on_primary};
+}}
+QTableWidget::item, QTableView::item {{ padding: 4px 6px; }}
+QHeaderView {{ background: {bg}; }}
+QHeaderView::section {{ background: {bg}; color: {text2}; border: none;
+    border-bottom: 1px solid {border}; padding: 6px 8px; font-weight: 600; }}
+QTableCornerButton::section {{ background: {bg}; border: none; }}
+QTabWidget::pane {{ border: 1px solid {border}; border-radius: 10px; background: {surface}; }}
+QTabBar::tab {{ background: transparent; color: {text2}; padding: 6px 14px; margin: 2px; }}
+QTabBar::tab:selected {{ color: {text}; border-bottom: 2px solid {blue}; font-weight: 600; }}
+QTabBar::tab:hover {{ color: {text}; }}
+QSplitter::handle {{ background: {border}; }}
+QCalendarWidget QWidget {{ background: {surface}; color: {text}; }}
+QScrollBar:vertical {{ background: {bg}; width: 12px; }}
+QScrollBar::handle:vertical {{ background: {border}; border-radius: 6px; min-height: 24px; }}
+QScrollBar::add-line, QScrollBar::sub-line {{ height: 0; }}
 """
+
+
+def build_palette(mode: ThemeMode) -> QPalette:
+    """A full palette so unstyled areas (table viewports, menus) follow the theme too."""
+    t = DARK if mode is ThemeMode.DARK else LIGHT
+    palette = QPalette()
+    for role, key in ((QPalette.ColorRole.Window, "bg"),
+                      (QPalette.ColorRole.WindowText, "text"),
+                      (QPalette.ColorRole.Base, "surface"),
+                      (QPalette.ColorRole.AlternateBase, "bg"),
+                      (QPalette.ColorRole.Text, "text"),
+                      (QPalette.ColorRole.Button, "surface"),
+                      (QPalette.ColorRole.ButtonText, "text"),
+                      (QPalette.ColorRole.ToolTipBase, "navy"),
+                      (QPalette.ColorRole.ToolTipText, "on_primary"),
+                      (QPalette.ColorRole.PlaceholderText, "text2"),
+                      (QPalette.ColorRole.Highlight, "blue"),
+                      (QPalette.ColorRole.HighlightedText, "on_primary"),
+                      (QPalette.ColorRole.Mid, "border"),
+                      (QPalette.ColorRole.Midlight, "border"),
+                      (QPalette.ColorRole.Dark, "navy"),
+                      (QPalette.ColorRole.Light, "surface")):
+        palette.setColor(role, QColor(t[key]))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, QColor(t["text2"]))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText,
+                     QColor(t["text2"]))
+    return palette
 
 
 def build_qss(mode: ThemeMode, rtl: bool = False) -> str:
@@ -76,5 +122,6 @@ class ThemeManager:
             font.setFamilies(FONT_FAMILIES)
         font.setPointSize(10)
         self.app.setFont(font)
+        self.app.setPalette(build_palette(self.effective))
         self.app.setStyleSheet(build_qss(self.effective, self.rtl))
         return self.effective
