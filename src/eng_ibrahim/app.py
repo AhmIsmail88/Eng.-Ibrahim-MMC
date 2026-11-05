@@ -30,7 +30,7 @@ from .presentation.shell.login_dialog import LoginDialog
 from .presentation.shell.main_window import MainWindow
 from .presentation.shell.startup_error import RETRY, StartupErrorDialog
 from .presentation.theme.manager import ThemeManager
-from .presentation.widgets import dialog_shortcuts
+from .presentation.widgets import date_fields, dialog_shortcuts
 
 log = logging.getLogger("eng_ibrahim")
 
@@ -86,6 +86,7 @@ def run(argv: list[str] | None = None) -> int:
         return 0
 
     dialog_shortcuts.install(app)  # Ctrl+S saves the open form (SPEC 3.6)
+    date_fields.install(app)  # dates read yyyy-MM-dd even in Arabic (SPEC 3.4)
     theme = ThemeManager(app, ThemeMode(boot_prefs.get("theme")))
     theme.apply()
 

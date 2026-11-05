@@ -7,6 +7,7 @@ out it shrinks only the wide columns so short values stay fully readable.
 """
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 
 from PySide6.QtCore import QEvent, QObject, Qt, QTimer
@@ -182,3 +183,96 @@ def set_empty_text(table: QTableView, text: Callable[[], str]) -> None:
 def polish_table(table: QTableView, empty_text: Callable[[], str]) -> None:
     fit_columns(table)
     set_empty_text(table, empty_text)
+
+
+# ---------------- click-to-sort (review F-14) ----------------
+_MARKS = str.maketrans("", "", "\u2066\u2067\u2068\u2069\u200e\u200f⚠")
+_NUMBER = re.compile(r"(?:[A-Za-z]{3}\s+)?(-?\d+(?:\.\d+)?)(?:\s+[^\d\s]+)?")
+
+
+def sort_key(text: str) -> tuple:
+    """Numbers (with units/currency) by value, ISO dates and codes as text, blanks last."""
+    clean = (text or "").translate(_MARKS).strip()
+    if clean in ("", "—", "…"):
+        return (2, "")
+    match = _NUMBER.fullmatch(clean.replace(",", ""))
+    if match:
+        return (0, float(match.group(1)), "")
+    return (1, clean.casefold())
+
+
+class _RowSorter(QObject):
+    """Sorts a table by a clicked column and applies the same order to the page's row list,
+    because pages map a table row to `rows[row]`. The order survives refreshes."""
+
+    def __init__(self, table: QTableWidget, owner: QObject, attr: str) -> None:
+        super().__init__(table)
+        self._table, self._owner, self._attr = table, owner, attr
+        self._column: int | None = None
+        self._order = Qt.SortOrder.AscendingOrder
+        self._busy = False
+        self._timer = QTimer(self)
+        self._timer.setSingleShot(True)
+        self._timer.setInterval(0)
+        self._timer.timeout.connect(self.apply)
+        header = table.horizontalHeader()
+        header.setSectionsClickable(True)
+        header.setSortIndicatorShown(False)
+        header.sectionClicked.connect(self._clicked)
+        model = table.model()
+        for signal in (model.rowsInserted, model.modelReset, model.dataChanged):
+            signal.connect(self._changed)
+
+    def _changed(self, *_args) -> None:
+        if not self._busy and self._column is not None and isValid(self._timer):
+            self._timer.start()
+
+    def _clicked(self, column: int) -> None:
+        if self._column == column:
+            self._order = (Qt.SortOrder.DescendingOrder
+                           if self._order == Qt.SortOrder.AscendingOrder
+                           else Qt.SortOrder.AscendingOrder)
+        else:
+            self._column, self._order = column, Qt.SortOrder.AscendingOrder
+        header = self._table.horizontalHeader()
+        header.setSortIndicatorShown(True)
+        header.setSortIndicator(column, self._order)
+        self.apply()
+
+    def apply(self) -> None:
+        table = self._table
+        if self._column is None or not isValid(table):
+            return
+        rows = getattr(self._owner, self._attr, None)
+        count = table.rowCount()
+        if not isinstance(rows, list) or len(rows) != count or count < 2:
+            return
+        keys = []
+        for r in range(count):
+            item = table.item(r, self._column)
+            keys.append(sort_key(item.text() if item else ""))
+        order = sorted(range(count), key=lambda r: keys[r],
+                       reverse=self._order == Qt.SortOrder.DescendingOrder)
+        if order == list(range(count)):
+            return
+        self._busy = True
+        try:
+            current = table.currentRow()
+            columns = table.columnCount()
+            taken = [[table.takeItem(r, c) for c in range(columns)] for r in range(count)]
+            blocked = table.blockSignals(True)
+            for new_row, old_row in enumerate(order):
+                for c in range(columns):
+                    if taken[old_row][c] is not None:
+                        table.setItem(new_row, c, taken[old_row][c])
+            table.blockSignals(blocked)
+            setattr(self._owner, self._attr, [rows[i] for i in order])
+            if current >= 0:
+                table.setCurrentCell(order.index(current), 0)
+        finally:
+            self._busy = False
+
+
+def sortable(table: QTableWidget, owner: QObject, attr: str = "_rows") -> None:
+    """Click a header to sort; `owner.<attr>` is the page's row list, kept in step."""
+    _RowSorter(table, owner, attr)

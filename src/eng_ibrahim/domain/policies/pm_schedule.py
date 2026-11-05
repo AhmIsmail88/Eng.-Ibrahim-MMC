@@ -8,6 +8,7 @@ from __future__ import annotations
 import calendar
 from dataclasses import dataclass
 from datetime import date, timedelta
+from decimal import Decimal
 
 NOT_DUE = "NotDue"
 DUE_SOON = "DueSoon"
@@ -61,10 +62,10 @@ def worst(*states: str) -> str:
 class Schedule:
     trigger_policy: str
     next_due_date: date | None
-    next_due_meter: float | None
+    next_due_meter: Decimal | None
     warning_days: int
-    warning_meter: float | None
-    latest_meter: float | None
+    warning_meter: Decimal | None
+    latest_meter: Decimal | None
     status: str  # Active / Paused / Archived
     open_work_order: bool = False
 
@@ -112,7 +113,7 @@ class Schedule:
         return states[0]
 
 
-def due_key(plan_id: str, due_date: date | None, due_meter: float | None) -> str:
+def due_key(plan_id: str, due_date: date | None, due_meter: float | Decimal | None) -> str:
     anchor = due_date.isoformat() if due_date else (
         f"m{int(due_meter)}" if due_meter is not None else "none")
     return f"{plan_id}:{anchor}"

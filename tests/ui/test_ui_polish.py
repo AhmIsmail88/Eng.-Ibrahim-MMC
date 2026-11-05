@@ -113,3 +113,84 @@ def test_user_guide_opens_in_the_current_language(qtbot, ctx, paths):
         text = dialog.browser.toPlainText()
         assert heading in text and "Ctrl+K" in text
 
+
+
+def test_date_fields_read_left_to_right_in_arabic(qtbot, qapp):
+    from PySide6.QtCore import QDate, Qt
+    from PySide6.QtWidgets import QDateEdit
+
+    from eng_ibrahim.presentation.widgets import date_fields
+    handler = date_fields.install(qapp)
+    try:
+        editor = QDateEdit(QDate(2026, 11, 5))
+        editor.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        qtbot.addWidget(editor)
+        editor.show()
+        qtbot.waitExposed(editor)
+        assert editor.layoutDirection() == Qt.LayoutDirection.LeftToRight
+        assert editor.text() == "2026-11-05"
+    finally:
+        qapp.removeEventFilter(handler)
+
+
+def test_header_click_sorts_table_and_rows_together(qtbot):
+    from PySide6.QtCore import QObject
+
+    from eng_ibrahim.presentation.widgets.tables import sort_key, sortable
+
+    assert sort_key("10 قطعة") > sort_key("9 قطعة")          # by value, not text
+    assert sort_key("147,600 km") > sort_key("78,560 km")
+    assert sort_key("EGP 1,250.00") > sort_key("EGP 999.00")
+    assert sort_key("2026-11-05") > sort_key("2026-02-01")   # ISO dates as text
+    assert sort_key("—") > sort_key("zzz")                    # blanks last
+
+    class Page(QObject):
+        def __init__(self):
+            super().__init__()
+            self.table = QTableWidget(0, 2)
+            self._rows: list = []
+            sortable(self.table, self)
+
+        def fill(self, records):
+            self._rows = list(records)
+            self.table.setRowCount(len(records))
+            for i, (code, qty) in enumerate(records):
+                self.table.setItem(i, 0, QTableWidgetItem(code))
+                self.table.setItem(i, 1, QTableWidgetItem(f"{qty} قطعة"))
+
+    page = Page()
+    qtbot.addWidget(page.table)
+    page.fill([("A", 9), ("B", 10), ("C", 2)])
+    page.table.setCurrentCell(0, 0)  # record A selected
+    page.table.horizontalHeader().sectionClicked.emit(1)
+    assert [r[0] for r in page._rows] == ["C", "A", "B"]
+    assert [page.table.item(i, 0).text() for i in range(3)] == ["C", "A", "B"]
+    assert page._rows[page.table.currentRow()][0] == "A"  # selection follows the record
+    page.table.horizontalHeader().sectionClicked.emit(1)  # second click: descending
+    assert [r[0] for r in page._rows] == ["B", "A", "C"]
+    # A refresh keeps the chosen order.
+    page.fill([("D", 1), ("E", 50)])
+    qtbot.waitUntil(lambda: page._rows[0][0] == "E")
+    assert page.table.item(0, 0).text() == "E"
+
+
+def test_date_time_fields_keep_section_order_in_rtl(qtbot, qapp):
+    from PySide6.QtCore import QDateTime, Qt
+    from PySide6.QtWidgets import QDateTimeEdit, QDialog, QFormLayout
+
+    from eng_ibrahim.presentation.widgets import date_fields
+    handler = date_fields.install(qapp)
+    previous = qapp.layoutDirection()
+    qapp.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+    try:
+        dialog = QDialog()
+        qtbot.addWidget(dialog)
+        edit = QDateTimeEdit(QDateTime.fromString("2026-11-05T08:10", "yyyy-MM-ddTHH:mm"))
+        edit.setDisplayFormat("yyyy-MM-dd HH:mm")  # set while still RTL, as in the forms
+        QFormLayout(dialog).addRow("x", edit)
+        dialog.show()
+        qtbot.waitExposed(dialog)
+        assert edit.text() == "2026-11-05 08:10"
+    finally:
+        qapp.setLayoutDirection(previous)
+        qapp.removeEventFilter(handler)

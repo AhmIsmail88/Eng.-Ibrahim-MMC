@@ -1,6 +1,47 @@
 # Changelog
 
 ## Unreleased
+- **Review phase C (P3 findings):**
+  - F-21 CI on GitHub Actions (windows-latest: ruff, mypy, pytest) and `scripts/check.ps1`
+    for the same checks locally; mypy blocks for domain, infrastructure and application.
+  - Fix found by mypy: notifications crashed whenever a PM plan was “due soon”.
+  - Report exports translate stored values (statuses, types, priorities) like the screen.
+  - QR labels: any number of assets, 24 per A4 page.
+  - pydantic removed (unused); dependency locks updated; mypy pinned in requirements-dev.lock.
+  - F-17 stale `__pycache__` folders are removed from the PyInstaller output.
+  - `docs/RUNBOOK.md`: what to do for the common operator situations (lockfile, password
+    reset, backup/restore, corruption check, moving PCs, upgrades, logs, import errors).
+- **Review phase B (P2 findings):**
+  - F-05 work orders can be edited (title, description, priority, due date) until work starts.
+  - F-06 purchase requests take any number of lines with a running total and are editable
+    while Draft; lines keep their entry order.
+  - F-07 report filters: category/status (REP-001), type/status (REP-005), warehouse (REP-009);
+    the export uses exactly the on-screen filters and lists them in its header.
+  - F-08/F-23 audit log: period, user and record-type filters, “Show more” past 300 events,
+    CSV export (formula-safe), local times, human codes and double-click to open a record.
+  - F-09 every literal translation key and every stored list value is checked by a test;
+    trades and expense types are translated.
+  - F-10/F-11/F-12 one form each for time logs (pickers + time type), downtime (type, start,
+    reason, linked to the order, shown in local time) and expenses (date, supplier).
+  - F-13 attachments on work orders and failure reports (shared panel); every owner type is
+    validated.
+  - F-14 click a column header to sort any list (numbers by value), kept after refresh.
+  - F-15/F-22 import reports ignored columns, commits exactly the previewed rows, logs failures.
+- **Review phase A (P1 findings):**
+  - F-01 master data: Edit and Archive/Restore on every tab. Codes change only while unused;
+    unit/currency codes never; archiving refused while active records use the entry; default
+    warehouse and base currency protected; currency decimals locked after first use.
+    Migration 0010 adds `is_active` to asset types, units and currencies.
+  - F-02 meter correction: “Correct the last reading” with a required reason in the asset and
+    vehicle reading dialogs; the wrong reading stays in history as rejected.
+  - F-03 warehouses: the spare-parts screen works on a chosen warehouse (remembered);
+    purchase receipt asks which warehouse when there are several.
+  - F-04 stock moves: return from work order, transfer between warehouses, scrap — all under
+    one “Stock movement” menu; none can eat reserved stock.
+  - SEC-01: data-protection decision recorded (ADR-036) and stated in the user guide.
+- **Fixes found on the way:** date fields showed reversed in Arabic (now always yyyy-MM-dd,
+  app-wide); `selectRow()` silently did nothing under RTL, so the vehicle's first service plan
+  was never pre-selected; quick stock count used floats; raw `parts.empty` key.
 - **Vehicles workshop (UI-007, SPEC 6):** fleet list with odometer, next service and
   document alerts; vehicle profile; odometer readings (same no-decrease rule as any
   cumulative meter); service programmes "every N km OR M months, whichever first" built on

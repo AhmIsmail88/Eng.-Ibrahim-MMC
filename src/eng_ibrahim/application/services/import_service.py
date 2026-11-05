@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import logging
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -29,10 +30,14 @@ from .audit import write_audit
 from .auth_service import AuthUser
 from .settings_service import SettingsService
 
+log = logging.getLogger(__name__)
+
 KINDS = {
     "assets": ("asset_code", "asset_name_ar", "category_code", "location_code"),
     "parts": ("part_code", "name_ar", "unit_code"),
 }
+# Columns read when present; anything else in the file is reported, never silently used.
+OPTIONAL = {"assets": ("criticality", "status"), "parts": ("reorder_point",)}
 MAX_ROWS = 5000
 
 
@@ -50,6 +55,8 @@ class ImportPreview:
     valid: int
     problems: list[RowProblem] = field(default_factory=list)
     sample: list[dict] = field(default_factory=list)
+    ignored_columns: list[str] = field(default_factory=list)
+    rows: list[dict] = field(default_factory=list, repr=False)  # what commit will write
 
     @property
     def ok(self) -> bool:
@@ -143,9 +150,11 @@ class ImportService:
                 if reorder and not _is_non_negative_number(reorder):
                     problems.append(RowProblem(index, "reorder_point", "err.quantity_invalid"))
         valid = len(rows) - len({p.row for p in problems})
+        known = set(KINDS[kind]) | set(OPTIONAL[kind])
+        present = {k for row in rows for k in row if k}
         return Result.success(ImportPreview(
             kind=kind, total=len(rows), valid=max(0, valid), problems=problems,
-            sample=rows[:20]))
+            sample=rows[:20], ignored_columns=sorted(present - known), rows=rows))
 
     def commit(self, actor: AuthUser | None, kind: str, path: Path) -> Result[int]:
         guard = _require_editor(actor)
@@ -157,7 +166,7 @@ class ImportService:
         data = preview.value
         if data is None or not data.ok:
             return Result.failure("err.import_invalid")
-        rows = [r for r in _read_rows(Path(path)) if any(v for v in r.values())]
+        rows = data.rows  # exactly the rows the preview checked: the file is read once
         currency = SettingsService(self._db).get("currency_code", "EGP")
         try:
             with self._db.unit_of_work() as s:
@@ -169,6 +178,7 @@ class ImportService:
                             func.lower(AssetCategory.code) == row["category_code"].lower()))
                         location = s.scalar(select(Location).where(
                             func.lower(Location.code) == row["location_code"].lower()))
+                        assert category is not None and location is not None  # validated
                         code = normalize_code(row["asset_code"])
                         s.add(Asset(
                             asset_code=code, asset_name_ar=row["asset_name_ar"].strip(),
@@ -197,4 +207,6 @@ class ImportService:
                             after={"kind": kind, "rows": len(rows)})
                 return Result.success(len(rows))
         except Exception:
+            # The user sees a short message; the cause goes to the log for support.
+            log.exception("Import of %s failed (%s)", Path(path).name, kind)
             return Result.failure("err.import_failed")

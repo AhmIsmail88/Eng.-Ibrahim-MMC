@@ -12,7 +12,6 @@ dependencies = [
   "SQLAlchemy>=2.0,<2.2",
   "alembic>=1.13,<2",
   "argon2-cffi>=23.1",
-  "pydantic>=2.6,<3",
   "openpyxl>=3.1,<4",
   "xlsxwriter>=3.1,<4",
   "qrcode>=7.4",
@@ -20,7 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-qt>=4.4", "ruff>=0.5"]
+dev = ["pytest>=8", "pytest-qt>=4.4", "ruff>=0.5", "mypy>=1.10"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -47,3 +46,16 @@ input_file = "main.py"
 exec_directory = "dist"
 icon = "assets/icons/ENG_IBRAHIM_Icon.ico"
 mode = "standalone"
+
+[tool.mypy]
+# Blocking in CI for the layers below the UI (review F-21); the Qt pages are checked
+# informally until PySide6's stubs and our widgets agree.
+python_version = "3.12"
+files = ["src/eng_ibrahim/domain", "src/eng_ibrahim/infrastructure", "src/eng_ibrahim/application"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = ["openpyxl", "openpyxl.*", "xlsxwriter", "xlsxwriter.*", "qrcode", "qrcode.*", "reportlab", "reportlab.*"]
+ignore_missing_imports = true

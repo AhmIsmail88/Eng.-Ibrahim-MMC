@@ -35,12 +35,14 @@ from ...application.dto.vehicle import (
 )
 from ...application.services.asset_service import AssetService
 from ...application.services.master_data_service import MasterDataService
+from ...application.services.meter_service import MeterService
 from ...application.services.pm_service import PMService
 from ...application.services.vehicle_service import VehicleService
 from ...application.services.work_order_service import WorkOrderService
 from ...domain.policies import pm_schedule as sched
 from ..theme.tokens import LIGHT
-from ..widgets.tables import polish_table
+from ..widgets.meter_correction import CorrectionBox
+from ..widgets.tables import polish_table, sortable
 from .base import BasePage, isolate, make_card, make_title, scrollable, select_row, vbox
 from .work_orders import NewWorkOrderDialog
 
@@ -167,7 +169,7 @@ class VehicleDialog(QDialog):
 
 class OdometerDialog(QDialog):
     def __init__(self, ctx: AppContext, current: str | None, unit: str,
-                 parent: QWidget | None = None) -> None:
+                 parent: QWidget | None = None, last=None) -> None:
         super().__init__(parent)
         self.setModal(True)
         self.setMinimumWidth(380)
@@ -185,6 +187,8 @@ class OdometerDialog(QDialog):
         hint.setObjectName("hint")
         hint.setWordWrap(True)
         form.addRow(hint)
+        self.correction = CorrectionBox(ctx, last)
+        form.addRow(self.correction)
         self.buttons = _dialog_buttons(ctx, self)
         form.addRow(self.buttons)
         self.setWindowTitle(ctx.tr("veh.add_odometer"))
@@ -276,6 +280,7 @@ class VehiclesPage(BasePage):
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         polish_table(self.table, lambda: self.ctx.tr("veh.empty"))
+        sortable(self.table, self)  # header click sorts (F-14)
         self.table.itemSelectionChanged.connect(self._on_select)
         left_lay.addWidget(self.table)
         split.addWidget(left)
@@ -538,7 +543,7 @@ class VehiclesPage(BasePage):
                         "danger" if plan.state in _ALERT_STATES else "warning"]))
                 self.plans.setItem(i, col, item)
         if d.plans:
-            self.plans.selectRow(0)
+            self.plans.setCurrentCell(0, 0)  # selectRow() is a no-op under RTL
 
         self.history.setRowCount(len(d.work_orders))
         for i, wo in enumerate(d.work_orders):
@@ -550,8 +555,10 @@ class VehiclesPage(BasePage):
         for i, reading in enumerate(d.readings):
             self.readings.setItem(i, 0, QTableWidgetItem(reading.reading_at[:16]
                                                          .replace("T", " ")))
-            self.readings.setItem(i, 1, QTableWidgetItem(
-                isolate(f"{self._fmt(reading.value)} {d.odometer_unit}")))
+            text = isolate(f"{self._fmt(reading.value)} {d.odometer_unit}")
+            if reading.quality == "rejected":  # replaced by a documented correction
+                text += f"  ({self.ctx.tr('meter.rejected')})"
+            self.readings.setItem(i, 1, QTableWidgetItem(text))
 
     # ---------------- commands ----------------
     def _warn(self, code: str | None) -> None:
@@ -591,13 +598,15 @@ class VehiclesPage(BasePage):
         d = self._detail
         if d is None:
             return
+        last = MeterService(self.ctx.db).last_reading(d.meter_id) if d.meter_id else None
         dialog = OdometerDialog(self.ctx, self._fmt(d.odometer) if d.odometer else None,
-                                d.odometer_unit, self)
+                                d.odometer_unit, self, last=last)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         value, stamp, notes = dialog.payload()
-        result = self.vehicles.add_odometer(self.ctx.current_user, d.asset_id, value, stamp,
-                                            notes)
+        result = self.vehicles.add_odometer(
+            self.ctx.current_user, d.asset_id, value, stamp, notes,
+            correction_reason=dialog.correction.correction_reason())
         if not result.ok:
             self._warn(result.error_code)
             return

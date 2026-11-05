@@ -36,6 +36,8 @@
 <p>The <b>Master data</b> screen has one tab per reference list: locations, categories, types, failure codes, task library, units, warehouses, currencies and operating calendars.</p>
 <ul>
 <li>Start with <b>locations</b>: every asset must be in one.</li>
+<li><b>Edit</b> (or double-click) to correct a name. A code changes only while nothing uses it yet.</li>
+<li><b>Archive</b> hides an entry from new forms but keeps it in old records; it is refused while active records still use it. <b>Restore</b> brings it back.</li>
 <li><b>Operating calendar</b>: set working days and shift hours with “Working hours”. An end time earlier than the start is a night shift ending the next day.</li>
 </ul>
 
@@ -43,7 +45,7 @@
 <ul>
 <li><b>New asset</b>: code, name, category and location are required; codes are unique.</li>
 <li>The asset profile has tabs: overview, technical data, meters, parts used, attachments and full history.</li>
-<li><b>Meters</b> (running hours, km, cycles): a new reading cannot be lower than the previous one, nor higher than a later one. Corrections are recorded as a documented correction; the original reading stays in the history.</li>
+<li><b>Meters</b> (running hours, km, cycles): a new reading cannot be lower than the previous one, nor higher than a later one. If the last reading was wrong, tick “Correct the last reading” and give the reason. The wrong reading stays in the history, marked rejected, and no longer counts.</li>
 <li><b>Import assets</b>: a CSV or Excel file with columns <code>asset_code, asset_name_ar, category_code, location_code</code>. The whole file is checked first; nothing is imported if a single row is wrong.</li>
 <li><b>QR labels</b> prints labels for the assets listed.</li>
 <li>Archive instead of delete: an archived asset leaves the lists but keeps its history.</li>
@@ -59,7 +61,7 @@
 </ul>
 
 <h2><a name="failures"></a>5. Failure reports</h2>
-<p>In <b>Corrective Maint.</b> record a <b>New report</b> with the fault and priority. After investigation use <b>Convert to work order</b>; the report is linked and cannot be converted twice.</p>
+<p>In <b>Corrective Maint.</b> record a <b>New report</b> with the fault and priority. After investigation use <b>Convert to work order</b>; the report is linked and cannot be converted twice. Below the list are the attachments of the selected report.</p>
 
 <h2><a name="wo"></a>6. Work orders</h2>
 <p>Life cycle:</p>
@@ -70,6 +72,10 @@
 <li><b>Reopen</b> after completion or closing is for administrators, with a reason.</li>
 <li>Cost = labour hours × technician rate + parts issued + external expenses. Amounts in another currency are not added to the total, and the cost status says so.</li>
 <li><b>Closed</b> and <b>cancelled</b> orders are read-only: no tasks, time, expenses or parts.</li>
+<li><b>Edit</b> title, description, priority and due date up to “Assigned”; once work starts the order is no longer edited.</li>
+<li><b>Time log</b>: technician, start and end from the calendar, and the time type (work/travel/waiting).</li>
+<li><b>Start downtime</b>: type (unplanned/planned/external), start time and reason. <b>Expense</b>: date and supplier.</li>
+<li>The <b>Attachments</b> tab holds photos of the fault and supplier reports.</li>
 </ul>
 
 <h2><a name="pm"></a>7. Preventive maintenance</h2>
@@ -87,32 +93,38 @@
 
 <h2><a name="parts"></a>9. Spare parts and stock</h2>
 <ul>
+<li>All moves are under <b>Stock movement</b> and apply to the <b>warehouse</b> chosen at the top (shown when there is more than one).</li>
 <li><b>Receive</b> increases stock and updates the weighted average cost.</li>
 <li><b>Issue to work order</b> reduces stock and adds the cost to the order. Quantity reserved for an order is available to that same order.</li>
-<li>A return from a work order cannot exceed what was issued to it.</li>
+<li><b>Return from work order</b>: pick the issue to return; never more than what is left of it.</li>
+<li><b>Transfer to another warehouse</b> moves quantity and value at the source's average cost.</li>
+<li><b>Scrap / damaged</b> takes stock off the books with a required reason.</li>
 <li><b>Adjust</b> and <b>Quick stock count</b> correct balances with a reason; a negative adjustment never eats reserved stock.</li>
 <li>“Low stock only” lists parts below their reorder point.</li>
 <li><b>Import parts</b>: CSV or Excel with <code>part_code, name_ar, unit_code</code> (optional <code>reorder_point</code>).</li>
 </ul>
 
 <h2><a name="purchases"></a>10. Suppliers and purchase requests</h2>
-<p>Create the request, <b>approve</b> it, and <b>receive</b> it when goods arrive: all lines enter stock together. If one line fails nothing is posted, and a request cannot be received twice.</p>
+<p>Create the request with any number of lines (part, quantity, cost), edit it while it is a draft, <b>approve</b> it, and <b>receive</b> it when goods arrive: all lines enter stock together. If one line fails nothing is posted, and a request cannot be received twice.</p>
 
 <h2><a name="dashboard"></a>11. Dashboard and search</h2>
 <ul>
 <li>Click any <b>card</b> to open its list pre-filtered, e.g. “Overdue PM” opens only overdue plans.</li>
 <li>Card colours: red overdue, orange warning, green fine.</li>
+<li>In any list, click a <b>column header</b> to sort, and again to reverse.</li>
+<li><b>Audit log</b>: filter by period, user and record type, “Show more” for older events, CSV export, and double-click to open the record.</li>
 <li><b>Global search</b> (Ctrl+K or the search box at the top): assets, vehicles, work orders and parts by code, name or plate; Enter opens the result.</li>
 </ul>
 
 <h2><a name="reports"></a>12. Reports</h2>
-<p>In <b>Reports</b> choose a report and period, then <b>Preview</b> or export <b>PDF</b> / <b>Excel</b>. Available: equipment register, PM schedule, work orders register, single work order, stock balance and maintenance cost.</p>
+<p>In <b>Reports</b> choose a report, its period and filters (category, status, type or warehouse, depending on the report), then <b>Preview</b> or export <b>PDF</b> / <b>Excel</b> with the same filters. Available: equipment register, PM schedule, work orders register, single work order, stock balance and maintenance cost.</p>
 
 <h2><a name="backup"></a>13. Backup and restore</h2>
 <ul>
 <li>The program makes an <b>automatic backup once a day</b> and keeps the latest 10 in the backup folder (can be switched off in Settings).</li>
 <li><b>Backup now</b> at any time. Copy the backup folder to a USB drive or another computer regularly.</li>
 <li>If the last backup is older than 7 days, the status bar shows an orange warning.</li>
+<li><b>Data protection:</b> the database and backups are not encrypted by the program. Turn on BitLocker, use a password-protected Windows account, and keep backups on an encrypted drive.</li>
 <li><b>Restore from file</b> verifies the archive and takes a safety backup of your current data before replacing it. Restart the program afterwards.</li>
 </ul>
 

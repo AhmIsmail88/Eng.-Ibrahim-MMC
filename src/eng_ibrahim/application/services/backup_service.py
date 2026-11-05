@@ -240,7 +240,7 @@ class BackupService:
     def restore(self, archive: Path) -> Result[None]:
         checked = self.verify(archive)
         if not checked.ok:
-            return checked
+            return Result.failure(checked.error_code or "err.backup_invalid")
         revision = str((checked.value or {}).get("schema_revision", ""))
         if self._schema and revision and revision > self._schema:
             return Result.failure("err.backup_newer_schema", revision)

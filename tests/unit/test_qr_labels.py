@@ -19,3 +19,11 @@ def test_sheet_contains_all_labels(tmp_path):
     with Image.open(path) as image:
         assert image.width > 400
     assert not list(tmp_path.glob(".qr_*.png"))  # temp files cleaned up
+
+
+def test_sheets_cover_every_item_across_pages(tmp_path):
+    from eng_ibrahim.infrastructure.exports.qr_labels import PER_PAGE, write_sheets
+    items = [(f"PMP-{i:03d}", "مضخة") for i in range(PER_PAGE * 2 + 3)]
+    pages = write_sheets(items, tmp_path / "qr.png")
+    assert [p.name for p in pages] == ["qr.png", "qr_2.png", "qr_3.png"]
+    assert all(p.is_file() for p in pages)

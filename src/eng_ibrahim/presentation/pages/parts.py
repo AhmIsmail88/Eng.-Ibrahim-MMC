@@ -1,7 +1,10 @@
 """Spare parts screen: catalog, receipt, issue, returns, adjustments (SPEC 12)."""
 from __future__ import annotations
 
+from decimal import Decimal, InvalidOperation
+
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -12,12 +15,14 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMenu,
     QMessageBox,
     QPushButton,
     QSpinBox,
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -28,7 +33,7 @@ from ...application.services.master_data_service import MasterDataService
 from ...application.services.work_order_service import WorkOrderService
 from ...domain.policies import wo_state_machine as sm
 from ..widgets.import_flow import run_import
-from ..widgets.tables import polish_table
+from ..widgets.tables import polish_table, sortable
 from .base import BasePage, make_card, make_title, select_row, vbox
 
 
@@ -137,6 +142,38 @@ class IssueDialog(QDialog):
         return dict(wo_id=self.wo.currentData(), quantity=self.qty.text())
 
 
+class _MoveDialog(QDialog):
+    """Quantity + reason form shared by return, transfer and scrap."""
+
+    def __init__(self, ctx: AppContext, title: str, rows: list[tuple[str, QWidget]],
+                 reason_required: bool, parent=None) -> None:
+        super().__init__(parent)
+        self.ctx = ctx
+        self.setModal(True)
+        self.setMinimumWidth(460)
+        self.setWindowTitle(title)
+        form = QFormLayout(self)
+        for label, widget in rows:
+            form.addRow(QLabel(label), widget)
+        self.qty = QLineEdit()
+        self.qty.setPlaceholderText("0")
+        self.reason = QLineEdit()
+        form.addRow(QLabel(ctx.tr("parts.quantity")), self.qty)
+        form.addRow(QLabel(ctx.tr("wo.reason") + (" *" if reason_required else "")),
+                    self.reason)
+        self.buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Save
+                                        | QDialogButtonBox.StandardButton.Cancel)
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+        self.buttons.button(QDialogButtonBox.StandardButton.Save).setText(ctx.tr("common.save"))
+        self.buttons.button(QDialogButtonBox.StandardButton.Cancel).setText(
+            ctx.tr("common.cancel"))
+        form.addRow(self.buttons)
+
+    def values(self) -> tuple[str, str]:
+        return self.qty.text().strip(), self.reason.text().strip()
+
+
 class PartsPage(BasePage):
     def __init__(self, ctx: AppContext) -> None:
         super().__init__(ctx)
@@ -161,23 +198,33 @@ class PartsPage(BasePage):
         self.btn_new = QPushButton()
         self.btn_new.setObjectName("primary")
         self.btn_new.clicked.connect(self._new_part)
-        self.btn_receive = QPushButton()
-        self.btn_receive.clicked.connect(self._receive)
-        self.btn_issue = QPushButton()
-        self.btn_issue.clicked.connect(self._issue)
-        self.btn_adjust = QPushButton()
-        self.btn_adjust.clicked.connect(self._adjust)
-        self.btn_count = QPushButton()
-        self.btn_count.clicked.connect(self._stock_count)
+        # Every stock movement acts on the warehouse chosen here (review F-03/F-04).
+        self.warehouse_label = QLabel()
+        self.warehouse = QComboBox()
+        self.warehouse.currentIndexChanged.connect(self._on_warehouse)
+        self.btn_moves = QToolButton()
+        self.btn_moves.setObjectName("menuButton")
+        self.btn_moves.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.move_menu = QMenu(self.btn_moves)
+        self.actions: dict[str, QAction] = {}
+        for key, handler in (("parts.receive", self._receive), ("parts.issue", self._issue),
+                             ("parts.return", self._return), ("parts.transfer", self._transfer),
+                             ("parts.scrap", self._scrap), ("parts.adjust", self._adjust),
+                             ("parts.count", self._stock_count)):
+            action = self.move_menu.addAction("")
+            action.triggered.connect(handler)
+            self.actions[key] = action
+        self.btn_moves.setMenu(self.move_menu)
         self.btn_import = QPushButton()
         self.btn_import.clicked.connect(self._import)
         self.btn_refresh = QPushButton()
         self.btn_refresh.clicked.connect(self.refresh)
         bar.addWidget(self.search)
         bar.addWidget(self.low_only)
+        bar.addWidget(self.warehouse_label)
+        bar.addWidget(self.warehouse)
         bar.addStretch(1)
-        for btn in (self.btn_new, self.btn_receive, self.btn_issue, self.btn_adjust,
-                    self.btn_count, self.btn_import, self.btn_refresh):
+        for btn in (self.btn_new, self.btn_moves, self.btn_import, self.btn_refresh):
             bar.addWidget(btn)
         lay.addLayout(bar)
 
@@ -190,6 +237,7 @@ class PartsPage(BasePage):
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         polish_table(self.table, lambda: self.ctx.tr("common.no_data"))
+        sortable(self.table, self)  # header click sorts (F-14)
         table_lay.addWidget(self.table)
         split.addWidget(table_card)
 
@@ -210,10 +258,11 @@ class PartsPage(BasePage):
         self.search.setPlaceholderText(tr("assets.search_hint"))
         self.low_only.setText(tr("parts.low_only"))
         self.btn_new.setText(tr("parts.new"))
-        self.btn_receive.setText(tr("parts.receive"))
-        self.btn_issue.setText(tr("parts.issue"))
-        self.btn_adjust.setText(tr("parts.adjust"))
-        self.btn_count.setText(tr("parts.count"))
+        self.btn_moves.setText(tr("parts.moves") + "  ▾")
+        self.warehouse_label.setText(tr("parts.warehouse"))
+        for key, action in self.actions.items():
+            action.setText(tr(key))
+        self._reload_warehouses()
         self.btn_import.setText(tr("parts.import"))
         self.btn_import.setToolTip(tr("parts.import_hint"))
         self.btn_refresh.setText(tr("common.refresh"))
@@ -233,7 +282,8 @@ class PartsPage(BasePage):
     def refresh(self) -> None:
         self._units = {u.code: u for u in self.masters.units()}
         self._rows = self.inventory.list_parts(query=self.search.text(),
-                                               low_only=self.low_only.isChecked())
+                                               low_only=self.low_only.isChecked(),
+                                               warehouse_id=self._warehouse_id())
         self.table.setRowCount(len(self._rows))
         for i, part in enumerate(self._rows):
             cells = (part.code, part.name(self.ctx.localizer.is_rtl), part.on_hand,
@@ -259,7 +309,8 @@ class PartsPage(BasePage):
 
     def _reload_moves(self) -> None:
         part = self._selected()
-        moves = self.inventory.movements(part_id=part.id if part else None, limit=50)
+        moves = self.inventory.movements(part_id=part.id if part else None, limit=50,
+                                         warehouse_id=self._warehouse_id())
         self.moves.setRowCount(len(moves))
         for i, move in enumerate(moves):
             self.moves.setItem(i, 0, QTableWidgetItem(move.number))
@@ -291,11 +342,33 @@ class PartsPage(BasePage):
     def _new_part(self) -> None:
         if not self.ctx.can_edit:
             return
-        dialog = NewPartDialog(self.ctx, self.masters.units(), self)
+        dialog = NewPartDialog(self.ctx, self.masters.units(active_only=True), self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         result = self.inventory.create_part(self.ctx.current_user, **dialog.payload())
         self._after(result)
+
+    # ---------------- warehouse ----------------
+    def _reload_warehouses(self) -> None:
+        current = self.warehouse.currentData() or self.ctx.prefs.get("parts_warehouse")
+        self.warehouse.blockSignals(True)
+        self.warehouse.clear()
+        self.inventory.ensure_default_warehouse()
+        for wh_id, code, name in self.inventory.warehouses():
+            self.warehouse.addItem(f"{code} — {name}", wh_id)
+        self.warehouse.setCurrentIndex(max(0, self.warehouse.findData(current)))
+        self.warehouse.blockSignals(False)
+        single = self.warehouse.count() <= 1
+        # One warehouse: nothing to choose, keep the toolbar quiet.
+        self.warehouse.setVisible(not single)
+        self.warehouse_label.setVisible(not single)
+
+    def _warehouse_id(self) -> str | None:
+        return self.warehouse.currentData()
+
+    def _on_warehouse(self, _index: int) -> None:
+        self.ctx.prefs.set("parts_warehouse", self._warehouse_id())
+        self.refresh()
 
     def _receive(self) -> None:
         part = self._selected()
@@ -305,7 +378,8 @@ class PartsPage(BasePage):
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         payload = dialog.payload()
-        result = self.inventory.receive(self.ctx.current_user, part.id, **payload)
+        result = self.inventory.receive(self.ctx.current_user, part.id,
+                                        warehouse_id=self._warehouse_id(), **payload)
         self._after(result)
 
     def _issue(self) -> None:
@@ -318,7 +392,8 @@ class PartsPage(BasePage):
         payload = dialog.payload()
         if not payload["wo_id"]:
             return
-        result = self.inventory.issue_to_wo(self.ctx.current_user, part.id, **payload)
+        result = self.inventory.issue_to_wo(self.ctx.current_user, part.id,
+                                            warehouse_id=self._warehouse_id(), **payload)
         self._after(result)
 
     def _adjust(self) -> None:
@@ -334,8 +409,75 @@ class PartsPage(BasePage):
                                           self.ctx.tr("wo.reason"))
         if not ok or not reason.strip():
             return
-        result = self.inventory.adjust(self.ctx.current_user, part.id, qty, reason)
+        result = self.inventory.adjust(self.ctx.current_user, part.id, qty, reason,
+                                       warehouse_id=self._warehouse_id())
         self._after(result)
+
+    def _return(self) -> None:
+        part = self._selected()
+        if part is None or not self.ctx.can_edit:
+            return
+        issues = self.inventory.returnable_issues(part.id, self._warehouse_id())
+        if not issues:
+            QMessageBox.information(self, self.ctx.tr("parts.return"),
+                                    self.ctx.tr("parts.return_none"))
+            return
+        source = QComboBox()
+        for issue in issues:
+            source.addItem(self.ctx.tr("parts.return_item", wo=issue.wo_number,
+                                       move=issue.movement_no, left=issue.remaining),
+                           issue.movement_id)
+        dialog = _MoveDialog(self.ctx, self.ctx.tr("parts.return"),
+                             [(self.ctx.tr("parts.return_from"), source)], False, self)
+        while dialog.exec() == QDialog.DialogCode.Accepted:
+            qty, reason = dialog.values()
+            result = self.inventory.return_from_wo(self.ctx.current_user,
+                                                   source.currentData(), qty, reason or None)
+            if result.ok:
+                self.refresh()
+                return
+            self._warn(result.error_code)
+
+    def _transfer(self) -> None:
+        part = self._selected()
+        if part is None or not self.ctx.can_edit:
+            return
+        targets = [w for w in self.inventory.warehouses() if w[0] != self._warehouse_id()]
+        if not targets:
+            QMessageBox.information(self, self.ctx.tr("parts.transfer"),
+                                    self.ctx.tr("parts.transfer_needs_two"))
+            return
+        target = QComboBox()
+        for wh_id, code, name in targets:
+            target.addItem(f"{code} — {name}", wh_id)
+        dialog = _MoveDialog(self.ctx, self.ctx.tr("parts.transfer"),
+                             [(self.ctx.tr("parts.transfer_to"), target)], False, self)
+        while dialog.exec() == QDialog.DialogCode.Accepted:
+            qty, reason = dialog.values()
+            result = self.inventory.transfer(self.ctx.current_user, part.id,
+                                             self._warehouse_id(), target.currentData(), qty,
+                                             reason or None)
+            if result.ok:
+                self.refresh()
+                return
+            self._warn(result.error_code)
+
+    def _scrap(self) -> None:
+        part = self._selected()
+        if part is None or not self.ctx.can_edit:
+            return
+        dialog = _MoveDialog(self.ctx, self.ctx.tr("parts.scrap"), [], True, self)
+        while dialog.exec() == QDialog.DialogCode.Accepted:
+            qty, reason = dialog.values()
+            result = self.inventory.scrap(self.ctx.current_user, part.id, qty, reason,
+                                          warehouse_id=self._warehouse_id())
+            if result.ok:
+                self.refresh()
+                return
+            self._warn(result.error_code)
+
+    def _warn(self, code: str | None) -> None:
+        QMessageBox.warning(self, self.ctx.tr("parts.title"), self.ctx.tr(code or "err.invalid"))
 
     def _stock_count(self) -> None:
         if not self.ctx.can_edit or not self._rows:
@@ -376,13 +518,14 @@ class PartsPage(BasePage):
             if not value or value == part.on_hand:
                 continue
             try:
-                delta = float(value) - float(part.on_hand)
-            except ValueError:
+                delta = Decimal(value) - Decimal(part.on_hand)
+            except InvalidOperation:
                 continue
-            if abs(delta) < 1e-9:
+            if delta == 0:
                 continue
             result = self.inventory.adjust(self.ctx.current_user, part.id, str(delta),
-                                           self.ctx.tr("parts.count_reason"))
+                                           self.ctx.tr("parts.count_reason"),
+                                           warehouse_id=self._warehouse_id())
             if result.ok:
                 applied += 1
         self.refresh()

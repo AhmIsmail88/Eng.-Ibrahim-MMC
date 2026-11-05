@@ -1,6 +1,7 @@
 """Asset registry: create/update/archive, location & status history, search (SPEC 5)."""
 from __future__ import annotations
 
+import builtins
 from datetime import date
 
 from sqlalchemy import func, or_, select
@@ -59,7 +60,7 @@ class AssetService:
     # ---------------- reads ----------------
     def list(self, query: str = "", category_id: str | None = None,
              location_id: str | None = None, status: str | None = None,
-             include_archived: bool = False) -> list[AssetRow]:
+             include_archived: bool = False) -> builtins.list[AssetRow]:
         with self._db.session() as s:
             stmt = (
                 select(Asset, AssetCategory, Location)
@@ -109,7 +110,7 @@ class AssetService:
                                     .where(AssetSpecification.asset_id == asset_id)
                                     .order_by(AssetSpecification.spec_key))
             ]
-            meters: list[MeterRow] = []
+            meters: builtins.list[MeterRow] = []
             meter_by_id: dict[str, MeterDefinition] = {}
             for m in s.scalars(select(MeterDefinition)
                                .where(MeterDefinition.asset_id == asset_id)
@@ -117,7 +118,7 @@ class AssetService:
                 meter_by_id[m.id] = m
                 last = s.scalars(
                     select(MeterReading)
-                    .where(MeterReading.meter_id == m.id)
+                    .where(MeterReading.meter_id == m.id, MeterReading.quality != "rejected")
                     .order_by(MeterReading.reading_at.desc()).limit(1)
                 ).first()
                 meters.append(MeterRow(id=m.id, code=m.meter_code, kind=m.kind,
@@ -133,19 +134,19 @@ class AssetService:
                     id=r.id, meter_code=meter.meter_code if meter else "",
                     value=r.value_decimal, unit_code=meter.unit_code if meter else "",
                     reading_at=r.reading_at, quality=r.quality, notes=r.notes))
-            history: list[HistoryRow] = []
+            history: builtins.list[HistoryRow] = []
             for h in s.scalars(select(AssetStatusHistory)
                                .where(AssetStatusHistory.asset_id == asset_id)
                                .order_by(AssetStatusHistory.changed_at.desc())):
                 history.append(HistoryRow(kind="status", at=h.changed_at, title=h.new_status,
                                           detail=h.reason or "", actor_id=h.actor_id))
-            for h in s.scalars(select(AssetLocationHistory)
+            for move in s.scalars(select(AssetLocationHistory)
                                .where(AssetLocationHistory.asset_id == asset_id)
                                .order_by(AssetLocationHistory.moved_at.desc())):
-                to_loc = s.get(Location, h.to_location_id)
-                history.append(HistoryRow(kind="location", at=h.moved_at,
+                to_loc = s.get(Location, move.to_location_id)
+                history.append(HistoryRow(kind="location", at=move.moved_at,
                                           title=to_loc.name_ar if to_loc else "",
-                                          detail=h.reason or "", actor_id=h.actor_id))
+                                          detail=move.reason or "", actor_id=move.actor_id))
             history.sort(key=lambda x: x.at, reverse=True)
             return AssetDetail(
                 id=row.id, code=row.asset_code, name_ar=row.asset_name_ar,

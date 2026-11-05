@@ -35,17 +35,18 @@ class NotificationService:
                 notices.append(Notice("critical", "notify.pm_overdue",
                                       f"{plan.code} · {plan.asset_code}", "pm", plan.id))
             elif plan.state == "DueSoon":
-                notices.append(Notice("warning", "notify.pm_due",
-                                      f"{plan.code} · {plan.due or plan.next_due_date or ''}",
+                due = plan.next_due_date or plan.next_due_meter or ""
+                notices.append(Notice("warning", "notify.pm_due", f"{plan.code} · {due}",
                                       "pm", plan.id))
         for part in InventoryService(self._db).list_parts(low_only=True):
             notices.append(Notice("warning", "notify.low_stock",
                                   f"{part.code} · {part.available} {part.unit_code}",
                                   "part", part.id))
         for order in WorkOrderService(self._db).list():
-            if order.status in ("Open", "Assigned", "InProgress", "OnHold")                     and order.due_at and order.due_at < today:
+            if (order.status in ("Open", "Assigned", "InProgress", "OnHold")
+                    and order.due_at and order.due_at < today):
                 notices.append(Notice("critical", "notify.wo_overdue",
                                       f"{order.number} · {order.asset_code}", "wo", order.id))
-        order = {"critical": 0, "warning": 1, "info": 2}
-        notices.sort(key=lambda n: order.get(n.severity, 9))
+        rank = {"critical": 0, "warning": 1, "info": 2}
+        notices.sort(key=lambda n: rank.get(n.severity, 9))
         return notices

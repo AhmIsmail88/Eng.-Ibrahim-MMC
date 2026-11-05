@@ -1,11 +1,21 @@
 # ENG. IBRAHIM — Maintenance Management System (CMMS)
 
 Offline, single-PC Windows desktop app. Python + PySide6 + SQLite. Spec: `SPEC.md`.
-**Status: Phase 4 complete + Phase 3b** — foundation, accounts, assets & meters, failures &
-work orders, preventive maintenance, inspections, spare parts with a stock ledger, dashboard
-status board, and a reporting engine with PDF/XLSX export (4 of 6 P0 reports).
-Reports (PDF/XLSX), backup/restore, import and users are in. Version 0.10.0 is the
-release candidate; the installer scripts live in `scripts/` (see docs/BUILD_AND_RELEASE.md).
+**Status: release candidate 0.10.0 (P0 / version 1.0 scope complete).**
+
+| Area | State |
+|---|---|
+| Assets, meters (with documented corrections), vehicles workshop | done |
+| Failures, work orders (state machine, time, downtime, cost, attachments) | done |
+| Preventive maintenance (calendar/meter/hybrid, daily auto-generation, catch-up) | done |
+| Inspections, spare parts (multi-warehouse ledger, return/transfer/scrap), purchase requests | done |
+| Reports: REP-001, 003, 005, 006, 009, 013 with filters — PDF and XLSX | done |
+| Master data (edit/archive), users and roles, audit log, import, backup/restore (daily auto) | done |
+| Arabic/English, light/dark, global search (Ctrl+K), in-app user guide (F1) | done |
+| P1 (version 1.1): remaining reports, charts, import wizard, template designer | planned |
+
+The installer scripts live in `scripts/` (see docs/BUILD_AND_RELEASE.md); daily operation is
+described in docs/RUNBOOK.md.
 
 ## Accounts (1.0)
 First run creates the owner/admin account with a password (Argon2id) and shows a one-time
@@ -33,6 +43,7 @@ python -m pytest -q
 ruff check src tests
 python scripts/check_database.py   # read-only DB health check
 ```
+Or everything at once, as CI runs it: `.\scripts\check.ps1`.
 
 ## Layout
 `src/eng_ibrahim/{domain,application,infrastructure,presentation,localization}` — see SPEC 20.2.

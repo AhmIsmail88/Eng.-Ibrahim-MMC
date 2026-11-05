@@ -23,7 +23,7 @@ from ...infrastructure.database.orm_models import (
 )
 from ...infrastructure.database.orm_models.base import utcnow_iso
 from ...infrastructure.database.orm_models.inventory import ISSUE_TYPES, RETURN_TYPES
-from ..dto.inventory import MovementRow, PartRow, PartUsageRow
+from ..dto.inventory import MovementRow, PartRow, PartUsageRow, ReturnableIssue
 from ..dto.result import Result
 from .audit import write_audit
 from .auth_service import AuthUser
@@ -74,10 +74,12 @@ class InventoryService:
                 s.flush()
             return row.id
 
-    def warehouses(self):
+    def warehouses(self, active_only: bool = True):
         with self._db.session() as s:
-            return [(w.id, w.warehouse_code, w.name_ar)
-                    for w in s.scalars(select(Warehouse).order_by(Warehouse.warehouse_code))]
+            stmt = select(Warehouse).order_by(Warehouse.warehouse_code)
+            if active_only:
+                stmt = stmt.where(Warehouse.is_active == 1)
+            return [(w.id, w.warehouse_code, w.name_ar) for w in s.scalars(stmt)]
 
     # ---------------- parts ----------------
     def create_part(self, actor: AuthUser | None, part_code: str, name_ar: str,
@@ -124,9 +126,11 @@ class InventoryService:
         except IntegrityError:
             return Result.failure("err.part_code_exists")
 
-    def list_parts(self, query: str = "", low_only: bool = False) -> list[PartRow]:
+    def list_parts(self, query: str = "", low_only: bool = False,
+                   warehouse_id: str | None = None) -> list[PartRow]:
+        """Balances of one warehouse (the default one unless `warehouse_id` is given)."""
         with self._db.session() as s:
-            warehouse_id = self._default_warehouse_id(s)
+            warehouse_id = warehouse_id or self._default_warehouse_id(s)
             stmt = select(Part).where(Part.is_active == 1).order_by(func.lower(Part.part_code))
             term = search_pattern(query)
             if term:
@@ -135,8 +139,8 @@ class InventoryService:
             rows = []
             for part in s.scalars(stmt):
                 balance = s.get(StockBalance, (part.id, warehouse_id)) if warehouse_id else None
-                on_hand = _d(balance.on_hand_decimal) if balance else Decimal(0)
-                reserved = _d(balance.reserved_decimal) if balance else Decimal(0)
+                on_hand = (_d(balance.on_hand_decimal) or Decimal(0)) if balance else Decimal(0)
+                reserved = (_d(balance.reserved_decimal) or Decimal(0)) if balance else Decimal(0)
                 available = on_hand - reserved
                 reorder = _d(part.reorder_point_decimal)
                 min_stock = _d(part.min_stock_decimal)
@@ -148,18 +152,20 @@ class InventoryService:
                     id=part.id, code=part.part_code, name_ar=part.name_ar,
                     name_en=part.name_en, unit_code=part.unit_code,
                     on_hand=str(on_hand), reserved=str(reserved), available=str(available),
-                    average_cost_minor=(_money(_d(balance.average_unit_cost_precise))
+                    average_cost_minor=(_money(_d(balance.average_unit_cost_precise) or Decimal(0))
                                         if balance else 0),
                     currency=(balance.currency_code if balance else (part.currency or "EGP")),
                     reorder_point=part.reorder_point_decimal, is_low=low))
             return rows
 
     def movements(self, part_id: str | None = None, wo_id: str | None = None,
-                  limit: int = 200) -> list[MovementRow]:
+                  limit: int = 200, warehouse_id: str | None = None) -> list[MovementRow]:
         with self._db.session() as s:
             stmt = select(StockMovement).order_by(StockMovement.posted_at.desc()).limit(limit)
             if part_id:
                 stmt = stmt.where(StockMovement.part_id == part_id)
+            if warehouse_id:
+                stmt = stmt.where(StockMovement.warehouse_id == warehouse_id)
             if wo_id:
                 stmt = stmt.where(StockMovement.wo_id == wo_id)
             return [MovementRow(
@@ -343,6 +349,126 @@ class InventoryService:
             write_audit(s, "stock_movement", movement.id, "stock_adjusted",
                         actor_id=actor.id if actor else None, reason=reason)
             return Result.success(movement.id)
+
+    def returnable_issues(self, part_id: str,
+                          warehouse_id: str | None = None) -> list[ReturnableIssue]:
+        """Issues of this part to work orders that still have quantity to return."""
+        with self._db.session() as s:
+            warehouse_id = warehouse_id or self._default_warehouse_id(s)
+            rows = []
+            for issue, wo in s.execute(
+                    select(StockMovement, WorkOrder)
+                    .join(WorkOrder, StockMovement.wo_id == WorkOrder.id)
+                    .where(StockMovement.part_id == part_id,
+                           StockMovement.warehouse_id == warehouse_id,
+                           StockMovement.movement_type.in_(ISSUE_TYPES),
+                           WorkOrder.status.notin_(WO_READ_ONLY))
+                    .order_by(StockMovement.posted_at.desc())).all():
+                returned = sum((_d(q) or Decimal(0) for q in s.scalars(
+                    select(StockMovement.quantity_decimal).where(
+                        StockMovement.original_movement_id == issue.id,
+                        StockMovement.movement_type.in_(RETURN_TYPES)))), Decimal(0))
+                issued = _d(issue.quantity_decimal) or Decimal(0)
+                if issued - returned > 0:
+                    rows.append(ReturnableIssue(
+                        movement_id=issue.id, movement_no=issue.movement_no,
+                        wo_number=wo.wo_number, posted_at=issue.posted_at,
+                        issued=str(issued), remaining=str(issued - returned)))
+            return rows
+
+    def transfer(self, actor: AuthUser | None, part_id: str, from_warehouse_id: str,
+                 to_warehouse_id: str, quantity: str, reason: str | None = None) -> Result[str]:
+        """Move stock between warehouses at the source's average cost: TRANSFER_OUT and
+        TRANSFER_IN are written together, so value leaves one balance and enters the other."""
+        guard = _require_editor(actor)
+        if not guard.ok:
+            return Result.failure(guard.error_code or "err.permission_denied")
+        qty = _d(quantity)
+        if qty is None or qty <= 0:
+            return Result.failure("err.quantity_invalid")
+        if not from_warehouse_id or from_warehouse_id == to_warehouse_id:
+            return Result.failure("err.transfer_same_warehouse")
+        with self._db.unit_of_work() as s:
+            part = s.get(Part, part_id)
+            target = s.get(Warehouse, to_warehouse_id)
+            if part is None:
+                return Result.failure("err.part_not_found")
+            if target is None or not target.is_active:
+                return Result.failure("err.warehouse_invalid")
+            source = s.get(StockBalance, (part_id, from_warehouse_id))
+            if source is None:
+                return Result.failure("err.stock_insufficient")
+            on_hand = _d(source.on_hand_decimal) or Decimal(0)
+            reserved = _d(source.reserved_decimal) or Decimal(0)
+            if on_hand - reserved < qty:
+                return Result.failure("err.stock_insufficient")
+            destination = self._balance(s, part_id, to_warehouse_id, source.currency_code)
+            if destination.currency_code != source.currency_code:
+                return Result.failure("err.currency_mismatch")
+            average = _d(source.average_unit_cost_precise) or Decimal(0)
+            unit, total = _money(average), _money(qty * average)
+            self._take(source, qty, total)
+            self._put(destination, qty, total)
+            out = self._movement(s, part_id, from_warehouse_id, "TRANSFER_OUT", qty, -qty,
+                                 unit, total, source.currency_code, actor, reason=reason)
+            self._movement(s, part_id, to_warehouse_id, "TRANSFER_IN", qty, qty, unit, total,
+                           source.currency_code, actor, original_movement_id=out.id,
+                           reason=reason)
+            write_audit(s, "stock_movement", out.id, "stock_transferred",
+                        actor_id=actor.id if actor else None,
+                        after={"part": part.part_code, "qty": str(qty),
+                               "to": target.warehouse_code}, reason=reason)
+            return Result.success(out.id)
+
+    def scrap(self, actor: AuthUser | None, part_id: str, quantity: str, reason: str,
+              warehouse_id: str | None = None) -> Result[str]:
+        """Damaged or expired stock leaves the books with a reason (never reserved stock)."""
+        guard = _require_editor(actor)
+        if not guard.ok:
+            return Result.failure(guard.error_code or "err.permission_denied")
+        qty = _d(quantity)
+        if qty is None or qty <= 0:
+            return Result.failure("err.quantity_invalid")
+        if not (reason or "").strip():
+            return Result.failure("err.reason_required")
+        with self._db.unit_of_work() as s:
+            part = s.get(Part, part_id)
+            if part is None:
+                return Result.failure("err.part_not_found")
+            warehouse_id = warehouse_id or self._default_warehouse_id(s)
+            balance = s.get(StockBalance, (part_id, warehouse_id))
+            if balance is None:
+                return Result.failure("err.stock_insufficient")
+            on_hand = _d(balance.on_hand_decimal) or Decimal(0)
+            reserved = _d(balance.reserved_decimal) or Decimal(0)
+            if on_hand - reserved < qty:
+                return Result.failure("err.stock_insufficient")
+            average = _d(balance.average_unit_cost_precise) or Decimal(0)
+            unit, total = _money(average), _money(qty * average)
+            self._take(balance, qty, total)
+            movement = self._movement(s, part_id, warehouse_id, "SCRAP", qty, -qty, unit, total,
+                                      balance.currency_code, actor, reason=reason.strip())
+            write_audit(s, "stock_movement", movement.id, "stock_scrapped",
+                        actor_id=actor.id if actor else None,
+                        after={"part": part.part_code, "qty": str(qty)}, reason=reason.strip())
+            return Result.success(movement.id)
+
+    @staticmethod
+    def _take(balance: StockBalance, qty: Decimal, total: int) -> None:
+        on_hand = (_d(balance.on_hand_decimal) or Decimal(0)) - qty
+        balance.on_hand_decimal = str(on_hand)
+        balance.inventory_value_minor = max(0, balance.inventory_value_minor - total)
+        if on_hand > 0:
+            balance.average_unit_cost_precise = str(
+                (Decimal(balance.inventory_value_minor) / on_hand).quantize(Decimal("0.000001")))
+
+    @staticmethod
+    def _put(balance: StockBalance, qty: Decimal, total: int) -> None:
+        on_hand = (_d(balance.on_hand_decimal) or Decimal(0)) + qty
+        balance.on_hand_decimal = str(on_hand)
+        balance.inventory_value_minor = balance.inventory_value_minor + total
+        balance.average_unit_cost_precise = str(
+            (Decimal(balance.inventory_value_minor) / on_hand).quantize(Decimal("0.000001")))
 
     # ---------------- reservations ----------------
     def reserve(self, actor: AuthUser | None, part_id: str, wo_id: str, quantity: str,

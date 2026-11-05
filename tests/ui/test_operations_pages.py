@@ -36,7 +36,7 @@ def test_work_orders_page_lists_created_order(qtbot, ctx, paths):
     qtbot.addWidget(page)
     page.refresh()
     assert page.table.rowCount() == 1
-    assert page.tabs.count() == 5
+    assert page.tabs.count() == 6  # + attachments
     page.table.selectRow(0)
     assert page._detail is not None
 
@@ -69,3 +69,30 @@ def test_pm_page_lists_plan_and_state(qtbot, ctx, paths):
     assert page.table.rowCount() == 1
     assert page.table.item(0, 0).text().startswith("PM-")
     assert page.tabs.count() == 2
+
+
+def test_purchase_dialog_builds_several_lines(qtbot, ctx, paths):
+    from eng_ibrahim.application.services.auth_service import AuthService as _Auth
+    from eng_ibrahim.application.services.first_run_service import (
+        FirstRunInput as _In,
+    )
+    from eng_ibrahim.application.services.first_run_service import (
+        FirstRunService as _First,
+    )
+    from eng_ibrahim.application.services.inventory_service import InventoryService
+    from eng_ibrahim.presentation.pages.purchases import NewRequestDialog
+    _First(ctx.db).complete(_In("محطة", "Station", "EGP", "Africa/Cairo", "admin", "M",
+                                paths.backups, "Admin#2026"))
+    admin = _Auth(ctx.db).authenticate("admin", "Admin#2026").value
+    ctx.current_user = admin
+    inv = InventoryService(ctx.db)
+    a = inv.create_part(admin, "A-1", "أ", "pcs").value
+    b = inv.create_part(admin, "B-1", "ب", "pcs").value
+    dialog = NewRequestDialog(ctx, [], inv.list_parts())
+    qtbot.addWidget(dialog)
+    dialog.lines.cellWidget(0, 1).setText("3")
+    dialog.lines.cellWidget(0, 2).setValue(10)
+    dialog.add_line(b, "2", 2500)
+    lines = dialog.payload()["lines"]
+    assert lines == [(a, "3", 1000), (b, "2", 2500)]
+    assert "80.00" in dialog.total.text()

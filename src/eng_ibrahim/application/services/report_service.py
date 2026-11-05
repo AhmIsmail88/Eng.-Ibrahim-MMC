@@ -1,7 +1,7 @@
 """Report definitions and data (SPEC 17). One query per report, reused by screen + exports."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date
 
 from sqlalchemy import func, select
@@ -27,6 +27,7 @@ class ReportColumn:
     title_key: str
     numeric: bool = False
     width: int = 18
+    value_key: str | None = None  # stored value shown as tr(f"{value_key}.{value}")
 
 
 @dataclass(frozen=True)
@@ -57,7 +58,8 @@ class ReportService:
 
     def build(self, code: str, *, date_from: str | None = None,
               date_to: str | None = None, category_id: str | None = None,
-              status: str | None = None, wo_id: str | None = None) -> ReportResult:
+              status: str | None = None, wo_id: str | None = None,
+              wo_type: str | None = None, warehouse_id: str | None = None) -> ReportResult:
         if code == "REP-001":
             return self._assets_register(category_id, status)
         if code == "REP-003":
@@ -65,9 +67,9 @@ class ReportService:
         if code == "REP-006":
             return self._wo_card(wo_id)
         if code == "REP-005":
-            return self._wo_register(date_from, date_to)
+            return self._wo_register(date_from, date_to, wo_type, status)
         if code == "REP-009":
-            return self._stock_balance()
+            return self._stock_balance(warehouse_id)
         if code == "REP-013":
             return self._maintenance_cost(date_from, date_to)
         raise ValueError(f"unknown report: {code}")
@@ -95,13 +97,15 @@ class ReportService:
             columns=[ReportColumn("code", "rep.col.code"), ReportColumn("name", "rep.col.name"),
                      ReportColumn("category", "rep.col.category"),
                      ReportColumn("location", "rep.col.location"),
-                     ReportColumn("criticality", "rep.col.criticality"),
-                     ReportColumn("status", "rep.col.status"),
+                     ReportColumn("criticality", "rep.col.criticality",
+                                  value_key="value.criticality"),
+                     ReportColumn("status", "rep.col.status", value_key="value.status"),
                      ReportColumn("condition", "rep.col.condition")],
             rows=rows, totals={"count": str(len(rows))})
 
     # ---------------- REP-005 ----------------
-    def _wo_register(self, date_from: str | None, date_to: str | None) -> ReportResult:
+    def _wo_register(self, date_from: str | None, date_to: str | None,
+                     wo_type: str | None = None, status: str | None = None) -> ReportResult:
         with self._db.session() as s:
             stmt = (select(WorkOrder, Asset)
                     .join(Asset, WorkOrder.asset_id == Asset.id)
@@ -110,6 +114,10 @@ class ReportService:
                 stmt = stmt.where(WorkOrder.requested_at >= date_from)
             if date_to:
                 stmt = stmt.where(WorkOrder.requested_at <= f"{date_to}T23:59:59")
+            if wo_type:
+                stmt = stmt.where(WorkOrder.type == wo_type)
+            if status:
+                stmt = stmt.where(WorkOrder.status == status)
             rows = [{
                 "number": wo.wo_number, "asset": asset.asset_code,
                 "type": wo.type, "title": wo.title, "status": wo.status,
@@ -120,10 +128,11 @@ class ReportService:
             code="REP-005", title_key="report.wo_register",
             columns=[ReportColumn("number", "rep.col.number"),
                      ReportColumn("asset", "rep.col.asset"),
-                     ReportColumn("type", "rep.col.type"),
+                     ReportColumn("type", "rep.col.type", value_key="value.wotype"),
                      ReportColumn("title", "rep.col.title", width=32),
-                     ReportColumn("status", "rep.col.status"),
-                     ReportColumn("priority", "rep.col.priority"),
+                     ReportColumn("status", "rep.col.status", value_key="value.wo"),
+                     ReportColumn("priority", "rep.col.priority",
+                                  value_key="value.criticality"),
                      ReportColumn("due", "rep.col.due"),
                      ReportColumn("completed", "rep.col.completed")],
             rows=rows, totals={"count": str(len(rows))},
@@ -147,8 +156,8 @@ class ReportService:
                      ReportColumn("asset", "rep.col.asset"),
                      ReportColumn("title", "rep.col.title", width=30),
                      ReportColumn("due", "rep.col.next_due"),
-                     ReportColumn("state", "rep.col.state"),
-                     ReportColumn("status", "rep.col.status")],
+                     ReportColumn("state", "rep.col.state", value_key="pm.state"),
+                     ReportColumn("status", "rep.col.status", value_key="pm.status")],
             rows=rows, totals={"count": str(len(rows))},
             meta={"from": date_from or "", "to": date_to or ""})
 
@@ -203,12 +212,15 @@ class ReportService:
                             meta={"wo": detail.number})
 
     # ---------------- REP-009 ----------------
-    def _stock_balance(self) -> ReportResult:
+    def _stock_balance(self, warehouse_id: str | None = None) -> ReportResult:
         with self._db.session() as s:
             parts = {p.id: p for p in s.scalars(select(Part))}
-            balances = s.execute(select(StockBalance, Warehouse)
-                                 .join(Warehouse, StockBalance.warehouse_id == Warehouse.id)
-                                 .order_by(func.lower(Warehouse.warehouse_code))).all()
+            stmt = (select(StockBalance, Warehouse)
+                    .join(Warehouse, StockBalance.warehouse_id == Warehouse.id)
+                    .order_by(func.lower(Warehouse.warehouse_code)))
+            if warehouse_id:
+                stmt = stmt.where(StockBalance.warehouse_id == warehouse_id)
+            balances = s.execute(stmt).all()
             rows = []
             total_value = 0
             for balance, warehouse in balances:
@@ -289,3 +301,25 @@ class ReportService:
     def default_period() -> tuple[str, str]:
         today = date.today()
         return today.replace(day=1).isoformat(), today.isoformat()
+
+
+def localized(report: ReportResult, tr) -> ReportResult:
+    """The same report with stored values (Draft, Medium, PM…) in the UI language.
+
+    Used by the preview and by the PDF/XLSX export so both show the same words; values
+    without a translation stay as stored rather than showing a raw key.
+    """
+    coded = [c for c in report.columns if c.value_key]
+    if not coded:
+        return report
+    rows = []
+    for row in report.rows:
+        row = dict(row)
+        for column in coded:
+            value = row.get(column.key)
+            if value:
+                key = f"{column.value_key}.{value}"
+                text = tr(key)
+                row[column.key] = value if text == key else text
+        rows.append(row)
+    return replace(report, rows=rows)

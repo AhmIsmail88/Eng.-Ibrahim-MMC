@@ -1,6 +1,7 @@
 """Work orders: creation, the SPEC 10.3.1 state machine, time, cost (SPEC 10)."""
 from __future__ import annotations
 
+import builtins
 from datetime import datetime
 
 from sqlalchemy import func, or_, select
@@ -47,6 +48,9 @@ from .numbering import next_number
 from .pm_service import PMService
 from .settings_service import SettingsService
 
+# Before work starts the order can still be corrected (review F-05).
+EDITABLE_STATUSES = (sm.DRAFT, sm.OPEN, sm.ASSIGNED)
+
 
 def _require_editor(actor: AuthUser | None) -> Result[None]:
     if actor is None or not can_edit(actor.role):
@@ -70,7 +74,7 @@ class WorkOrderService:
 
     # ---------------- reads ----------------
     def list(self, status: str | None = None, asset_id: str | None = None,
-             type_: str | None = None, query: str = "") -> list[WoRow]:
+             type_: str | None = None, query: str = "") -> builtins.list[WoRow]:
         with self._db.session() as s:
             stmt = (select(WorkOrder, Asset)
                     .join(Asset, WorkOrder.asset_id == Asset.id)
@@ -179,7 +183,7 @@ class WorkOrderService:
                     continue
                 external += exp.amount_minor
         parts_minor, parts_currency = InventoryService(self._db).work_order_part_cost(wo_id)
-        flags: list[str] = []
+        flags: builtins.list[str] = []
         if parts_currency and parts_currency != currency:
             flags.append("parts_currency_excluded")
             parts_minor = 0
@@ -199,7 +203,7 @@ class WorkOrderService:
                description: str | None = None, priority: str = "Medium",
                due_at: str | None = None, scheduled_start: str | None = None,
                failure_id: str | None = None,
-               tasks: list[tuple[str, bool]] | None = None) -> Result[str]:
+               tasks: builtins.list[tuple[str, bool]] | None = None) -> Result[str]:
         guard = _require_editor(actor)
         if not guard.ok:
             return Result.failure(guard.error_code or "err.permission_denied")
@@ -274,7 +278,7 @@ class WorkOrderService:
             wo = s.get(WorkOrder, wo_id)
             if wo is None:
                 return Result.failure("err.wo_not_found")
-            payload = {
+            payload: dict[str, object] = {
                 "asset_id": wo.asset_id, "title": wo.title, "priority": wo.priority,
                 "requested_at": wo.requested_at, "reason": reason,
                 "actual_start_at": wo.actual_start_at or utcnow_iso(),
@@ -324,6 +328,39 @@ class WorkOrderService:
             write_audit(s, "work_order", wo.id, "wo_status_changed",
                         actor_id=actor.id if actor else None,
                         before={"status": before}, after={"status": target}, reason=reason)
+            return Result.success()
+
+    def update(self, actor: AuthUser | None, wo_id: str, title: str,
+               description: str | None, priority: str, due_at: str | None) -> Result[None]:
+        """Correct a work order before work starts (review F-05).
+
+        Number, asset and type never change; once In Progress the order is the record of
+        what was done and is no longer edited.
+        """
+        guard = _require_editor(actor)
+        if not guard.ok:
+            return Result.failure(guard.error_code or "err.permission_denied")
+        if priority not in PRIORITY:
+            return Result.failure("err.priority_invalid")
+        title = (title or "").strip()
+        if not title:
+            return Result.failure("err.wo_title_required")
+        with self._db.unit_of_work() as s:
+            wo = s.get(WorkOrder, wo_id)
+            if wo is None:
+                return Result.failure("err.wo_not_found")
+            if wo.status not in EDITABLE_STATUSES:
+                return Result.failure("err.wo_locked_for_edit")
+            fields = {"title": title, "description": (description or "").strip() or None,
+                      "priority": priority, "due_at": due_at or None}
+            before = {k: getattr(wo, k) for k in fields if getattr(wo, k) != fields[k]}
+            if not before:
+                return Result.success()
+            for key in before:
+                setattr(wo, key, fields[key])
+            write_audit(s, "work_order", wo.id, "wo_updated",
+                        actor_id=actor.id if actor else None, before=before,
+                        after={k: fields[k] for k in before})
             return Result.success()
 
     def assign(self, actor: AuthUser | None, wo_id: str, technician_id: str) -> Result[None]:

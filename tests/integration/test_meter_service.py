@@ -81,3 +81,29 @@ def test_back_dated_reading_cannot_exceed_a_later_one(meters):
     high = service.add_reading(admin, asset_id, meter_id, "500", "2026-01-15T08:00")
     assert high.error_code == "err.meter_decrease"
     assert service.add_reading(admin, asset_id, meter_id, "150", "2026-01-15T08:00").ok
+
+
+def test_wrong_reading_can_be_corrected_with_a_reason(meters):
+    ctx, _auth, admin, service, asset_id, meter_id = meters
+    assert service.add_reading(admin, asset_id, meter_id, "100", "2026-01-01T08:00").ok
+    typo = service.add_reading(admin, asset_id, meter_id, "1500", "2026-01-02T08:00")
+    assert typo.ok
+    # Without a correction the true value is refused…
+    assert service.add_reading(admin, asset_id, meter_id, "150", "2026-01-03T08:00") \
+        .error_code == "err.meter_decrease"
+    # …a correction needs a reason and cannot go below the last good reading.
+    assert service.correct_last_reading(admin, asset_id, meter_id, "150",
+                                        "2026-01-02T09:00", "").error_code \
+        == "err.reason_required"
+    assert service.correct_last_reading(admin, asset_id, meter_id, "90",
+                                        "2026-01-02T09:00", "خطأ كتابة").error_code \
+        == "err.meter_decrease"
+    fixed = service.correct_last_reading(admin, asset_id, meter_id, "150",
+                                         "2026-01-02T09:00", "خطأ كتابة: 1500 بدل 150")
+    assert fixed.ok
+    assert service.latest(meter_id) == 150
+    # The wrong reading stays in history, rejected; later readings work normally.
+    detail = AssetService(ctx.db).detail(asset_id)
+    qualities = {r.value: r.quality for r in detail.readings}
+    assert qualities["1500"] == "rejected" and qualities["150"] == "valid"
+    assert service.add_reading(admin, asset_id, meter_id, "160", "2026-01-03T08:00").ok

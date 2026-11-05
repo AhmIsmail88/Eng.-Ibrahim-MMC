@@ -40,7 +40,21 @@ def write_sheet(items: list[tuple[str, str]], target: Path, columns: int = 4) ->
                        outline="#C9D4E1")
         if font is not None:
             draw.text((x, y + qr_img.height + 10), f"{code}", fill="#11345A", font=font)
-            draw.text((x, y + qr_img.height + 28), name[:38], fill="#162B43", font=font)
+            if name.isascii():  # Pillow here cannot shape Arabic: never print it garbled
+                draw.text((x, y + qr_img.height + 28), name[:38], fill="#162B43", font=font)
     target.parent.mkdir(parents=True, exist_ok=True)
     sheet.save(target, "PNG")
     return target
+
+
+PER_PAGE = 24  # 4 x 6 labels on an A4 page
+
+
+def write_sheets(items: list[tuple[str, str]], target: Path) -> list[Path]:
+    """Every item, PER_PAGE labels per page: target.png, target_2.png, … (review F-16)."""
+    pages = [items[i:i + PER_PAGE] for i in range(0, len(items), PER_PAGE)] or [[]]
+    paths = []
+    for number, page in enumerate(pages, start=1):
+        out = target if number == 1 else target.with_name(f"{target.stem}_{number}{target.suffix}")
+        paths.append(write_sheet(page, out))
+    return paths

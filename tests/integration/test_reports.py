@@ -120,3 +120,78 @@ def test_work_order_card_report(world):
     labels = [row["label"].strip() for row in result.rows]
     assert "Prepared By" in labels and "Signature / Date" in labels
     assert any("WO-" in row["value"] for row in result.rows)
+
+
+def test_report_filters(ctx, paths):
+    from eng_ibrahim.application.dto.asset import AssetInput
+    from eng_ibrahim.application.services.asset_service import AssetService
+    from eng_ibrahim.application.services.auth_service import AuthService
+    from eng_ibrahim.application.services.first_run_service import (
+        FirstRunInput,
+        FirstRunService,
+    )
+    from eng_ibrahim.application.services.inventory_service import InventoryService
+    from eng_ibrahim.application.services.master_data_service import MasterDataService
+    from eng_ibrahim.application.services.report_service import ReportService
+    from eng_ibrahim.application.services.work_order_service import WorkOrderService
+    FirstRunService(ctx.db).complete(FirstRunInput(
+        "محطة", "Station", "EGP", "Africa/Cairo", "admin", "M", paths.backups, "Admin#2026"))
+    admin = AuthService(ctx.db).authenticate("admin", "Admin#2026").value
+    masters = MasterDataService(ctx.db)
+    cats = {c.code: c.id for c in masters.categories()}
+    loc = masters.locations()[0].id
+    assets = AssetService(ctx.db)
+    pump = assets.create(admin, AssetInput(asset_code="P-1", asset_name_ar="مضخة",
+                                           category_id=cats["PUMP"], location_id=loc)).value
+    assets.create(admin, AssetInput(asset_code="M-1", asset_name_ar="محرك",
+                                    category_id=cats["MOTOR"], location_id=loc,
+                                    operational_status="Standby"))
+    reports = ReportService(ctx.db)
+    assert [r["code"] for r in reports.build("REP-001", category_id=cats["PUMP"]).rows] \
+        == ["P-1"]
+    assert [r["code"] for r in reports.build("REP-001", status="Standby").rows] == ["M-1"]
+    orders = WorkOrderService(ctx.db)
+    orders.create(admin, pump, "CM", "إصلاح")
+    orders.create(admin, pump, "PM", "وقائي")
+    assert [r["type"] for r in reports.build("REP-005", wo_type="PM").rows] == ["PM"]
+    assert len(reports.build("REP-005", status="Draft").rows) == 2
+    inv = InventoryService(ctx.db)
+    main = inv.ensure_default_warehouse()
+    masters.create_warehouse(admin, "WH2", "مخزن 2")
+    wh2 = next(w[0] for w in inv.warehouses() if w[1] == "WH2")
+    part = inv.create_part(admin, "X-1", "قطعة", "pcs").value
+    inv.receive(admin, part, "2", 100)
+    inv.receive(admin, part, "5", 100, warehouse_id=wh2)
+    assert len(reports.build("REP-009").rows) == 2
+    assert [r["warehouse"] for r in reports.build("REP-009", warehouse_id=wh2).rows] == ["WH2"]
+    assert main
+
+
+def test_report_values_follow_the_ui_language(ctx, paths):
+    from eng_ibrahim.application.dto.asset import AssetInput
+    from eng_ibrahim.application.services.asset_service import AssetService
+    from eng_ibrahim.application.services.auth_service import AuthService
+    from eng_ibrahim.application.services.first_run_service import (
+        FirstRunInput,
+        FirstRunService,
+    )
+    from eng_ibrahim.application.services.master_data_service import MasterDataService
+    from eng_ibrahim.application.services.report_service import ReportService, localized
+    from eng_ibrahim.application.services.work_order_service import WorkOrderService
+    FirstRunService(ctx.db).complete(FirstRunInput(
+        "محطة", "Station", "EGP", "Africa/Cairo", "admin", "M", paths.backups, "Admin#2026"))
+    admin = AuthService(ctx.db).authenticate("admin", "Admin#2026").value
+    masters = MasterDataService(ctx.db)
+    category = next(c for c in masters.categories() if c.code == "PUMP")
+    asset = AssetService(ctx.db).create(admin, AssetInput(
+        asset_code="P-1", asset_name_ar="مضخة", category_id=category.id,
+        location_id=masters.locations()[0].id)).value
+    WorkOrderService(ctx.db).create(admin, asset, "PM", "وقائي", priority="High")
+    raw = ReportService(ctx.db).build("REP-005")
+    assert (raw.rows[0]["status"], raw.rows[0]["priority"]) == ("Draft", "High")
+    shown = localized(raw, ctx.tr)  # the test context is Arabic
+    row = shown.rows[0]
+    assert row["status"] == ctx.tr("value.wo.Draft") != "Draft"
+    assert row["priority"] == ctx.tr("value.criticality.High")
+    assert row["type"] == ctx.tr("value.wotype.PM")
+    assert raw.rows[0]["status"] == "Draft"  # the original result is untouched

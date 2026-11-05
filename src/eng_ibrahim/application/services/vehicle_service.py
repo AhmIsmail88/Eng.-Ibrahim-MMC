@@ -7,9 +7,11 @@ reuse the PM engine instead of a second scheduler.
 """
 from __future__ import annotations
 
+import builtins
 from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
+from typing import Any
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
@@ -94,7 +96,7 @@ class VehicleService:
 
     # ---------------- reads ----------------
     def list(self, query: str = "", alerts_only: bool = False,
-             include_archived: bool = False) -> list[VehicleRow]:
+             include_archived: bool = False) -> builtins.list[VehicleRow]:
         plans_by_asset = defaultdict(list)
         for plan in PMService(self._db).list():
             if plan.status == "Active":
@@ -145,7 +147,7 @@ class VehicleService:
                                    .where(MeterReading.meter_id == meter_id)
                                    .order_by(MeterReading.reading_at.desc()).limit(50))]
             odometer = self._odometer(s, asset_id)
-            base = dict(
+            base: dict[str, Any] = dict(
                 asset_id=asset.id, asset_code=asset.asset_code,
                 fleet_code=vehicle.fleet_code or asset.asset_code,
                 name_ar=asset.asset_name_ar, name_en=asset.asset_name_en,
@@ -194,7 +196,7 @@ class VehicleService:
                     model=_clean(data.model), serial_number=_clean(data.vin),
                     meter_type="Kilometer", default_meter_unit=data.odometer_unit,
                     notes=_clean(data.notes)))
-                if not created.ok:
+                if not created.ok or created.value is None:
                     raise _Abort(created.error_code or "err.asset_not_found")
                 asset_id = created.value
                 s.add(Vehicle(asset_id=asset_id, fleet_code=code, **self._profile(data)))
@@ -267,18 +269,23 @@ class VehicleService:
             return Result.failure("err.fleet_code_exists")
 
     def add_odometer(self, actor: AuthUser | None, asset_id: str, value: str,
-                     reading_at: str, notes: str | None = None) -> Result[str]:
-        """Same rules as any cumulative meter: a lower value needs a documented correction."""
+                     reading_at: str, notes: str | None = None,
+                     correction_reason: str | None = None) -> Result[str]:
+        """Same rules as any cumulative meter: a lower value needs a documented correction,
+        which replaces the last reading (`correction_reason` given)."""
         with self._db.session() as s:
             meter_id = self._meter_id(s, asset_id)
         if meter_id is None:
             return Result.failure("err.vehicle_not_found")
-        return MeterService(self._db).add_reading(actor, asset_id, meter_id, value,
-                                                  reading_at, notes=notes)
+        meters = MeterService(self._db)
+        if correction_reason is not None:
+            return meters.correct_last_reading(actor, asset_id, meter_id, value, reading_at,
+                                               correction_reason)
+        return meters.add_reading(actor, asset_id, meter_id, value, reading_at, notes=notes)
 
     def add_service_plan(self, actor: AuthUser | None, asset_id: str, title: str,
                          every_km: str | None, every_months: int | None,
-                         tasks: list[tuple[str, bool]] | None = None) -> Result[str]:
+                         tasks: builtins.list[tuple[str, bool]] | None = None) -> Result[str]:
         """'Every N km OR every M months, whichever comes first' (SPEC 6.3)."""
         km = self._number(every_km)
         months = every_months if every_months and every_months > 0 else None

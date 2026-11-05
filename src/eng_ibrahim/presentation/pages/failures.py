@@ -25,7 +25,8 @@ from ...application.context import AppContext
 from ...application.services.asset_service import AssetService
 from ...application.services.failure_service import FailureService
 from ...application.services.work_order_service import WorkOrderService
-from ..widgets.tables import polish_table
+from ..widgets.attachments_panel import AttachmentsPanel
+from ..widgets.tables import polish_table, sortable
 from .base import BasePage, make_card, make_title, vbox
 
 
@@ -113,6 +114,7 @@ class FailuresPage(BasePage):
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         polish_table(self.table, lambda: self.ctx.tr("common.no_data"))
+        sortable(self.table, self)  # header click sorts (F-14)
         self.table.itemSelectionChanged.connect(self._sync_buttons)
         self.table.currentCellChanged.connect(lambda *_a: self._sync_buttons())
         card_lay.addWidget(self.table, 1)
@@ -131,10 +133,22 @@ class FailuresPage(BasePage):
         actions.addStretch(1)
         card_lay.addLayout(actions)
         lay.addWidget(card, 1)
+        # Photos of the fault or a supplier's report stay with the report itself (F-13).
+        attach_card = make_card()
+        attach_lay = QVBoxLayout(attach_card)
+        self.attach_title = QLabel()
+        self.attach_title.setObjectName("sectionTitle")
+        self.attach_panel = AttachmentsPanel(self.ctx, "failure")
+        self.attach_panel.setMinimumHeight(170)
+        attach_lay.addWidget(self.attach_title)
+        attach_lay.addWidget(self.attach_panel)
+        lay.addWidget(attach_card)
 
     def retranslate(self) -> None:
         tr = self.ctx.tr
         self.title.setText(tr("failures.title"))
+        self.attach_title.setText(tr("failures.attachments"))
+        self.attach_panel.retranslate()
         self.search.setPlaceholderText(tr("assets.search_hint"))
         self.btn_new.setText(tr("failures.new"))
         self.btn_refresh.setText(tr("common.refresh"))
@@ -182,6 +196,8 @@ class FailuresPage(BasePage):
 
     def _sync_buttons(self) -> None:
         row = self._selected()
+        if hasattr(self, "attach_panel"):
+            self.attach_panel.set_owner(row.id if row else None)
         editable = self.ctx.can_edit
         self.btn_triage.setEnabled(editable and row is not None and row.status == "New")
         self.btn_convert.setEnabled(editable and row is not None

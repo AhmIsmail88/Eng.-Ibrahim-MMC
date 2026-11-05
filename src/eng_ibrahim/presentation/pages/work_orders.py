@@ -1,12 +1,14 @@
 """Work orders screen: list, state-machine actions, tasks, time logs (SPEC 10)."""
 from __future__ import annotations
 
-from PySide6.QtCore import QDate, Qt
+from PySide6.QtCore import QDate, QDateTime, Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QDateEdit,
+    QDateTimeEdit,
     QDialog,
     QDialogButtonBox,
+    QDoubleSpinBox,
     QFormLayout,
     QHBoxLayout,
     QInputDialog,
@@ -29,10 +31,16 @@ from ...application.services.asset_service import AssetService
 from ...application.services.downtime_service import DowntimeService
 from ...application.services.inspection_service import InspectionService
 from ...application.services.master_data_service import MasterDataService
-from ...application.services.work_order_service import WorkOrderService
+from ...application.services.work_order_service import EDITABLE_STATUSES, WorkOrderService
 from ...domain.policies import wo_state_machine as sm
-from ..widgets.tables import polish_table
-from .base import BasePage, make_card, make_title, select_row, vbox
+from ...infrastructure.database.orm_models.maintenance import (
+    DOWNTIME_TYPE,
+    EXPENSE_TYPE,
+    TIME_CATEGORY,
+)
+from ..widgets.attachments_panel import AttachmentsPanel
+from ..widgets.tables import polish_table, sortable
+from .base import BasePage, local_time, make_card, make_title, select_row, vbox
 from .inspections import FillDialog
 
 # Exactly what the dashboard's "open work orders" card counts (drafts excluded).
@@ -94,12 +102,146 @@ class NewWorkOrderDialog(QDialog):
         self.buttons.button(QDialogButtonBox.StandardButton.Cancel).setText(ctx.tr("common.cancel"))
         self.setWindowTitle(ctx.tr("wo.form.title"))
 
+    def load(self, d: WoDetail) -> None:
+        """Edit mode: asset and type are fixed, the rest is the order's current values."""
+        self.setWindowTitle(self.ctx.tr("wo.edit") + f" — {d.number}")
+        self.asset.setCurrentIndex(max(0, self.asset.findData(d.asset_id)))
+        self.type.setCurrentIndex(max(0, self.type.findData(d.type)))
+        self.asset.setEnabled(False)
+        self.type.setEnabled(False)
+        self.title.setText(d.title)
+        self.description.setPlainText(d.description or "")
+        self.priority.setCurrentIndex(max(0, self.priority.findData(d.priority)))
+        if d.due_at:
+            self.due.setDate(QDate.fromString(d.due_at[:10], "yyyy-MM-dd"))
+
     def payload(self) -> dict:
         return dict(
             asset_id=self.asset.currentData(), type_=self.type.currentData(),
             title=self.title.text(), description=self.description.toPlainText().strip() or None,
             priority=self.priority.currentData(),
             due_at=self.due.date().toString("yyyy-MM-dd"))
+
+
+def _form_buttons(ctx: AppContext, dialog: QDialog) -> QDialogButtonBox:
+    box = QDialogButtonBox(QDialogButtonBox.StandardButton.Save
+                           | QDialogButtonBox.StandardButton.Cancel)
+    box.accepted.connect(dialog.accept)
+    box.rejected.connect(dialog.reject)
+    box.button(QDialogButtonBox.StandardButton.Save).setText(ctx.tr("common.save"))
+    box.button(QDialogButtonBox.StandardButton.Cancel).setText(ctx.tr("common.cancel"))
+    return box
+
+
+def _stamp(edit: QDateTimeEdit) -> str:
+    """Local wall time as entered (time logs compare these strings directly)."""
+    return edit.dateTime().toString("yyyy-MM-ddTHH:mm")
+
+
+class TimeLogDialog(QDialog):
+    """One form instead of three prompts; dates are picked, not typed (review F-10)."""
+
+    def __init__(self, ctx: AppContext, technicians, parent=None) -> None:
+        super().__init__(parent)
+        self.setModal(True)
+        self.setMinimumWidth(440)
+        self.setWindowTitle(ctx.tr("wo.time.add"))
+        form = QFormLayout(self)
+        self.technician = QComboBox()
+        for tech in technicians:
+            self.technician.addItem(tech.name_ar, tech.id)
+        now = QDateTime.currentDateTime()
+        self.start = QDateTimeEdit(now.addSecs(-3600))
+        self.end = QDateTimeEdit(now)
+        for edit in (self.start, self.end):
+            edit.setCalendarPopup(True)
+            edit.setDisplayFormat("yyyy-MM-dd HH:mm")
+        self.category = QComboBox()
+        for value in TIME_CATEGORY:
+            self.category.addItem(ctx.tr(f"value.timec.{value}"), value)
+        self.notes = QLineEdit()
+        for key, widget in (("wo.time.technician", self.technician),
+                            ("wo.time.start", self.start), ("wo.time.end", self.end),
+                            ("wo.time.category", self.category),
+                            ("wo.expense.notes", self.notes)):
+            form.addRow(QLabel(ctx.tr(key)), widget)
+        self.buttons = _form_buttons(ctx, self)
+        form.addRow(self.buttons)
+
+    def payload(self) -> dict:
+        return dict(technician_id=self.technician.currentData(), start_at=_stamp(self.start),
+                    end_at=_stamp(self.end), category=self.category.currentData(),
+                    notes=self.notes.text().strip() or None)
+
+
+class DowntimeDialog(QDialog):
+    """Type, start and reason of an equipment stop (review F-11)."""
+
+    def __init__(self, ctx: AppContext, parent=None) -> None:
+        super().__init__(parent)
+        self.setModal(True)
+        self.setMinimumWidth(420)
+        self.setWindowTitle(ctx.tr("wo.downtime.start"))
+        form = QFormLayout(self)
+        self.kind = QComboBox()
+        for value in DOWNTIME_TYPE:
+            self.kind.addItem(ctx.tr(f"value.downtime.{value}"), value)
+        self.start = QDateTimeEdit(QDateTime.currentDateTime())
+        self.start.setCalendarPopup(True)
+        self.start.setDisplayFormat("yyyy-MM-dd HH:mm")
+        self.reason = QLineEdit()
+        form.addRow(QLabel(ctx.tr("wo.downtime.type")), self.kind)
+        form.addRow(QLabel(ctx.tr("wo.downtime.from")), self.start)
+        form.addRow(QLabel(ctx.tr("wo.reason")), self.reason)
+        self.buttons = _form_buttons(ctx, self)
+        form.addRow(self.buttons)
+
+    def payload(self) -> dict:
+        # Downtime is stored in UTC like every other event timestamp.
+        return dict(started_at=self.start.dateTime().toUTC().toString(
+                        "yyyy-MM-ddTHH:mm:ss.zzz000") + "Z",
+                    downtime_type=self.kind.currentData(),
+                    reason=self.reason.text().strip() or None)
+
+
+class ExpenseDialog(QDialog):
+    """Amount, type, date and optional supplier of an external cost (review F-12)."""
+
+    def __init__(self, ctx: AppContext, suppliers, parent=None) -> None:
+        super().__init__(parent)
+        self.setModal(True)
+        self.setMinimumWidth(440)
+        currency = ctx.settings.get("currency_code", "EGP")
+        self.setWindowTitle(ctx.tr("wo.expense.add"))
+        form = QFormLayout(self)
+        self.amount = QDoubleSpinBox()
+        self.amount.setMaximum(10_000_000)
+        self.amount.setDecimals(2)
+        self.amount.setSuffix(f"  {currency}")
+        self.kind = QComboBox()
+        for value in EXPENSE_TYPE:
+            self.kind.addItem(ctx.tr(f"value.expense.{value}"), value)
+        self.date = QDateEdit(QDate.currentDate())
+        self.date.setCalendarPopup(True)
+        self.supplier = QComboBox()
+        self.supplier.addItem("—", None)
+        for sup in suppliers:
+            self.supplier.addItem(sup.label(ctx.localizer.is_rtl), sup.id)
+        self.notes = QLineEdit()
+        for key, widget in (("wo.expense.amount", self.amount), ("wo.expense.type", self.kind),
+                            ("wo.expense.date", self.date),
+                            ("wo.expense.supplier", self.supplier),
+                            ("wo.expense.notes", self.notes)):
+            form.addRow(QLabel(ctx.tr(key)), widget)
+        self.buttons = _form_buttons(ctx, self)
+        form.addRow(self.buttons)
+
+    def payload(self) -> dict:
+        return dict(expense_date=self.date.date().toString("yyyy-MM-dd"),
+                    expense_type=self.kind.currentData(),
+                    amount_minor=int(round(self.amount.value() * 100)),
+                    supplier_id=self.supplier.currentData(),
+                    notes=self.notes.text().strip() or None)
 
 
 class WorkOrdersPage(BasePage):
@@ -149,6 +291,7 @@ class WorkOrdersPage(BasePage):
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         polish_table(self.table, lambda: self.ctx.tr("common.no_data"))
+        sortable(self.table, self)  # header click sorts (F-14)
         self.table.itemSelectionChanged.connect(self._on_select)
         left_lay.addWidget(self.table)
         split.addWidget(left)
@@ -166,11 +309,16 @@ class WorkOrdersPage(BasePage):
         self.tabs.addTab(self._build_history(), "")
         self.tabs.addTab(self._build_inspections(), "")
         self.tabs.addTab(self._build_downtime(), "")
+        self.attach_panel = AttachmentsPanel(self.ctx, "work_order")
+        self.tabs.addTab(self.attach_panel, "")
         right_lay.addWidget(self.head)
         right_lay.addWidget(self.meta)
         right_lay.addWidget(self.tabs, 1)
 
         actions = QHBoxLayout()
+        self.btn_edit = QPushButton()
+        self.btn_edit.clicked.connect(self._edit)
+        actions.addWidget(self.btn_edit)
         self.btn_expense = QPushButton()
         self.btn_expense.clicked.connect(self._add_expense)
         actions.addWidget(self.btn_expense)
@@ -283,6 +431,8 @@ class WorkOrdersPage(BasePage):
         self.tabs.setTabText(2, tr("wo.tab.history"))
         self.tabs.setTabText(3, tr("wo.tab.inspections"))
         self.tabs.setTabText(4, tr("wo.tab.downtime"))
+        self.tabs.setTabText(5, tr("assets.tab.attachments"))
+        self.attach_panel.retranslate()
         self.btn_down_start.setText(tr("wo.downtime.start"))
         self.btn_down_stop.setText(tr("wo.downtime.stop"))
         self.down_table.setHorizontalHeaderLabels([tr(k) for k in (
@@ -306,6 +456,7 @@ class WorkOrdersPage(BasePage):
         for key, _sources, _target in _ACTIONS:
             self._buttons[key].setText(tr(key))
         self.btn_expense.setText(tr("wo.expense.add"))
+        self.btn_edit.setText(tr("wo.edit"))
         self._reload_statuses()
         self.refresh()
         self._render()  # the open detail pane carries translated values too
@@ -408,7 +559,11 @@ class WorkOrdersPage(BasePage):
 
         editable = self.ctx.can_edit and d.status in (sm.DRAFT, sm.OPEN, sm.ASSIGNED,
                                                       sm.IN_PROGRESS, sm.ON_HOLD)
-        self.btn_expense.setEnabled(self.ctx.can_edit)
+        self.btn_expense.setEnabled(self.ctx.can_edit and d.status not in (sm.CLOSED,
+                                                                          sm.CANCELLED))
+        self.btn_edit.setEnabled(self.ctx.can_edit and d.status in EDITABLE_STATUSES)
+        self.btn_edit.setToolTip("" if d.status in EDITABLE_STATUSES
+                                 else self.ctx.tr("err.wo_locked_for_edit"))
         self.btn_task.setEnabled(editable)
         self.btn_task_done.setEnabled(editable)
         self.btn_time.setEnabled(editable)
@@ -417,6 +572,7 @@ class WorkOrdersPage(BasePage):
         self.btn_down_start.setEnabled(self.ctx.can_edit)
         self.btn_down_stop.setEnabled(self.ctx.can_edit)
         self._render_downtime(d)
+        self.attach_panel.set_owner(d.id, editable=d.status not in (sm.CLOSED, sm.CANCELLED))
         allowed = set(sm.allowed_targets(d.status, self.ctx.current_user.role
                                          if self.ctx.current_user else None))
         for key, sources, target in _ACTIONS:
@@ -441,12 +597,12 @@ class WorkOrdersPage(BasePage):
         rows = self.downtime.list_for_asset(d.asset_id)
         self._down_rows = rows
         self.down_table.setRowCount(len(rows))
-        for i, (downtime_id, started, ended, kind, _reason) in enumerate(rows):
-            cells = (started[:16].replace("T", " "),
-                     (ended or "…")[:16].replace("T", " "),
+        for i, (downtime_id, started, ended, kind, reason) in enumerate(rows):
+            cells = (local_time(started), local_time(ended) if ended else "…",
                      self.ctx.tr(f"value.downtime.{kind}"))
             for col, text in enumerate(cells):
                 item = QTableWidgetItem(text)
+                item.setToolTip(reason or "")
                 if col == 0:
                     item.setData(Qt.ItemDataRole.UserRole, downtime_id)
                 self.down_table.setItem(i, col, item)
@@ -595,9 +751,11 @@ class WorkOrdersPage(BasePage):
     def _start_downtime(self) -> None:
         if self._detail is None or not self.ctx.can_edit:
             return
-        from ...infrastructure.database.orm_models.base import utcnow_iso
+        dialog = DowntimeDialog(self.ctx, self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
         result = self.downtime.start(self.ctx.current_user, self._detail.asset_id,
-                                     utcnow_iso(), "unplanned")
+                                     work_order_id=self._detail.id, **dialog.payload())
         self._after(result)
 
     def _stop_downtime(self) -> None:
@@ -612,34 +770,31 @@ class WorkOrdersPage(BasePage):
     def _add_expense(self) -> None:
         if self._detail is None or not self.ctx.can_edit:
             return
-        from datetime import date
-
-        from PySide6.QtWidgets import QDoubleSpinBox
-        amount = QDoubleSpinBox()
-        amount.setMaximum(1_000_000)
-        amount.setDecimals(2)
-        kind = QComboBox()
-        for value in ("External Repair", "Transport", "Other"):
-            kind.addItem(value, value)
-        notes = QLineEdit()
-        dialog = QDialog(self)
-        dialog.setWindowTitle(self.ctx.tr("wo.expense.add"))
-        form = QFormLayout(dialog)
-        form.addRow(QLabel(self.ctx.tr("wo.expense.amount")), amount)
-        form.addRow(QLabel(self.ctx.tr("wo.expense.type")), kind)
-        form.addRow(QLabel(self.ctx.tr("wo.expense.notes")), notes)
-        box = QDialogButtonBox(QDialogButtonBox.StandardButton.Save
-                               | QDialogButtonBox.StandardButton.Cancel)
-        box.accepted.connect(dialog.accept)
-        box.rejected.connect(dialog.reject)
-        form.addRow(box)
+        dialog = ExpenseDialog(self.ctx, self.masters.suppliers(), self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
-        result = self.service.add_expense(
-            self.ctx.current_user, self._detail.id, date.today().isoformat(),
-            kind.currentData(), int(round(amount.value() * 100)),
-            notes=notes.text().strip() or None)
+        result = self.service.add_expense(self.ctx.current_user, self._detail.id,
+                                          **dialog.payload())
         self._after(result)
+
+    def _edit(self) -> None:
+        d = self._detail
+        if d is None or not self.ctx.can_edit:
+            return
+        dialog = NewWorkOrderDialog(self.ctx, self.service, self.assets, self)
+        dialog.load(d)
+        while dialog.exec() == QDialog.DialogCode.Accepted:
+            data = dialog.payload()
+            result = self.service.update(self.ctx.current_user, d.id, data["title"],
+                                         data["description"], data["priority"],
+                                         data["due_at"])
+            if result.ok:
+                self._detail = self.service.detail(d.id)
+                self.refresh()
+                self._render()
+                return
+            QMessageBox.warning(self, self.ctx.tr("wo.edit"),
+                                self.ctx.tr(result.error_code or "err.invalid"))
 
     def _add_task(self) -> None:
         if self._detail is None:
@@ -656,21 +811,15 @@ class WorkOrdersPage(BasePage):
             return
         techs = self.masters.technicians()
         if not techs:
+            QMessageBox.information(self, self.ctx.tr("wo.time.add"),
+                                    self.ctx.tr("wo.time.no_technicians"))
             return
-        labels = [t.name_ar for t in techs]
-        choice, ok = QInputDialog.getItem(
-            self, self.ctx.tr("wo.time.add"), self.ctx.tr("wo.time.technician"),
-            labels, 0, False)
-        if not ok:
-            return
-        start, ok = QInputDialog.getText(self, self.ctx.tr("wo.time.add"),
-                                         f"{self.ctx.tr('wo.time.start')} (YYYY-MM-DDTHH:MM)")
-        if not ok:
-            return
-        end, ok = QInputDialog.getText(self, self.ctx.tr("wo.time.add"),
-                                       f"{self.ctx.tr('wo.time.end')} (YYYY-MM-DDTHH:MM)")
-        if not ok:
-            return
-        result = self.service.add_time_log(self.ctx.current_user, self._detail.id,
-                                           techs[labels.index(choice)].id, start, end)
-        self._after(result)
+        dialog = TimeLogDialog(self.ctx, techs, self)
+        while dialog.exec() == QDialog.DialogCode.Accepted:
+            result = self.service.add_time_log(self.ctx.current_user, self._detail.id,
+                                               **dialog.payload())
+            if result.ok:
+                self._after(result)
+                return
+            QMessageBox.warning(self, self.ctx.tr("wo.time.add"),
+                                self.ctx.tr(result.error_code or "err.invalid"))

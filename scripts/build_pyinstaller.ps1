@@ -14,6 +14,12 @@ $mode = if ($OneFile) { "--onefile" } else { "--onedir" }
     --add-data "src/eng_ibrahim/localization;eng_ibrahim/localization" `
     main.py
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed." }
+# --add-data copies folders verbatim, including the developer's __pycache__ (review F-17).
+# Alembic compiles the migration scripts itself at runtime; the stale .pyc are just noise.
+if (-not $OneFile) {
+    Get-ChildItem "dist\ENG_IBRAHIM\_internal" -Recurse -Directory -Filter "__pycache__" |
+        Remove-Item -Recurse -Force
+}
 $exe = if ($OneFile) { "dist\ENG_IBRAHIM.exe" } else { "dist\ENG_IBRAHIM\ENG_IBRAHIM.exe" }
 & "$PSScriptRoot\sign.ps1" -Files $exe
 Write-Host "Output: $exe"

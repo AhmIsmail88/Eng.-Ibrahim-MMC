@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QTime
+from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -21,11 +22,10 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from sqlalchemy import select
 
 from ...application.context import AppContext
 from ...application.services.master_data_service import MasterDataService
-from ...infrastructure.database.orm_models import FailureCode, MaintenanceTask, Unit, Warehouse
+from ...application.services.reference_admin import KINDS, ReferenceAdminService, RefRow
 from ..widgets.tables import polish_table
 from .base import BasePage, make_card, make_title, vbox
 
@@ -99,10 +99,18 @@ class CalendarWeekDialog(QDialog):
                 for weekday, (on, start, end) in self.rows.items() if on.isChecked()}
 
 
+# tab order → (reference kind, table attribute)
+TAB_KINDS = (("location", "loc_table"), ("category", "cat_table"), ("type", "type_table"),
+             ("failure_code", "fc_table"), ("task", "task_table"), ("unit", "unit_table"),
+             ("warehouse", "wh_table"), ("currency", "cur_table"), ("calendar", "cal_table"))
+
+
 class MasterDataPage(BasePage):
     def __init__(self, ctx: AppContext) -> None:
         super().__init__(ctx)
         self.service = MasterDataService(ctx.db)
+        self.admin = ReferenceAdminService(ctx.db)
+        self._rows: dict[str, list[RefRow]] = {}
         self._build()
         self.retranslate()
 
@@ -173,6 +181,21 @@ class MasterDataPage(BasePage):
         self.tabs.addTab(self._tab(self.cal_table, self.btn_cal, self.btn_cal_week), "")
         card_lay.addWidget(self.tabs)
         lay.addWidget(card, 1)
+        # Every tab gets Edit and Archive/Restore next to its "New" button (SPEC 3.8).
+        self._row_buttons: dict[str, tuple[QPushButton, QPushButton]] = {}
+        for index, (kind, table_attr) in enumerate(TAB_KINDS):
+            bar = self.tabs.widget(index).layout().itemAt(1).layout()
+            edit, archive = QPushButton(), QPushButton()
+            edit.clicked.connect(lambda _c=False, k=kind: self._edit_selected(k))
+            archive.clicked.connect(lambda _c=False, k=kind: self._toggle_archive(k))
+            bar.insertWidget(1, archive)
+            bar.insertWidget(1, edit)
+            self._row_buttons[kind] = (edit, archive)
+            table: QTableWidget = getattr(self, table_attr)
+            table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+            table.itemSelectionChanged.connect(lambda k=kind: self._sync_buttons(k))
+            table.currentCellChanged.connect(lambda *_a, k=kind: self._sync_buttons(k))
+            table.itemDoubleClicked.connect(lambda _i, k=kind: self._edit_selected(k))
 
     @staticmethod
     def _tab(table: QTableWidget, *buttons: QPushButton) -> QWidget:
@@ -262,72 +285,106 @@ class MasterDataPage(BasePage):
         self.btn_loc.setText(tr("master.new_location"))
         self.btn_cat.setText(tr("master.new_category"))
         self.btn_type.setText(tr("master.new_type"))
+        for edit, archive in self._row_buttons.values():
+            edit.setText(tr("master.edit"))
+            archive.setText(tr("master.archive"))
         for table in (self.loc_table, self.cat_table, self.type_table):
             table.setHorizontalHeaderLabels([tr("master.code"), tr("master.name"),
                                              tr("master.extra")])
         self.refresh()
 
     def refresh(self) -> None:
-        locations = self.service.locations(active_only=False)
-        self.loc_table.setRowCount(len(locations))
-        for i, loc in enumerate(locations):
-            self.loc_table.setItem(i, 0, QTableWidgetItem(loc.code))
-            self.loc_table.setItem(i, 1, QTableWidgetItem(loc.name_ar))
-            self.loc_table.setItem(i, 2, QTableWidgetItem(loc.name_en or "—"))
-        categories = self.service.categories(active_only=False)
-        self.cat_table.setRowCount(len(categories))
-        for i, cat in enumerate(categories):
-            self.cat_table.setItem(i, 0, QTableWidgetItem(cat.code))
-            self.cat_table.setItem(i, 1, QTableWidgetItem(cat.name_ar))
-            self.cat_table.setItem(i, 2, QTableWidgetItem(cat.name_en or "—"))
-        types = self.service.types_with_category()
-        self.type_table.setRowCount(len(types))
-        for i, (_tid, code, name, category) in enumerate(types):
-            self.type_table.setItem(i, 0, QTableWidgetItem(code))
-            self.type_table.setItem(i, 1, QTableWidgetItem(name))
-            self.type_table.setItem(i, 2, QTableWidgetItem(category))
         for btn in (self.btn_loc, self.btn_cat, self.btn_type, self.btn_fc, self.btn_wh,
                     self.btn_task_new, self.btn_unit, self.btn_cur, self.btn_cal,
                     self.btn_cal_week):
             btn.setEnabled(self.ctx.can_edit)
-        currencies = self.service.currency_rows()
-        self.cur_table.setRowCount(len(currencies))
-        for i, (code, name, minor) in enumerate(currencies):
-            for col, text in enumerate((code, name, str(minor))):
-                self.cur_table.setItem(i, col, QTableWidgetItem(text))
-        self._calendars = self.service.calendar_rows()
-        self.cal_table.setRowCount(len(self._calendars))
-        for i, (_cid, code, name, hours, days) in enumerate(self._calendars):
-            for col, text in enumerate((code, name, str(days), f"{hours:g}")):
-                self.cal_table.setItem(i, col, QTableWidgetItem(text))
-        with self.ctx.db.session() as session:
-            codes = session.scalars(select(FailureCode).order_by(FailureCode.code)).all()
-            self.fc_table.setRowCount(len(codes))
-            for i, code in enumerate(codes):
-                self.fc_table.setItem(i, 0, QTableWidgetItem(code.code))
-                self.fc_table.setItem(i, 1, QTableWidgetItem(code.name_ar))
-                self.fc_table.setItem(i, 2, QTableWidgetItem(code.group_code))
-            tasks = session.scalars(select(MaintenanceTask)
-                                    .order_by(MaintenanceTask.task_code)).all()
-            self.task_table.setRowCount(len(tasks))
-            for i, task in enumerate(tasks):
-                self.task_table.setItem(i, 0, QTableWidgetItem(task.task_code))
-                self.task_table.setItem(i, 1, QTableWidgetItem(task.title_ar))
-                self.task_table.setItem(i, 2, QTableWidgetItem(
-                    f"{task.estimated_min} min" if task.estimated_min else ""))
-            warehouses = session.scalars(select(Warehouse)
-                                         .order_by(Warehouse.warehouse_code)).all()
-            self.wh_table.setRowCount(len(warehouses))
-            for i, wh in enumerate(warehouses):
-                self.wh_table.setItem(i, 0, QTableWidgetItem(wh.warehouse_code))
-                self.wh_table.setItem(i, 1, QTableWidgetItem(wh.name_ar))
-                self.wh_table.setItem(i, 2, QTableWidgetItem(wh.name_en or "—"))
-            units = session.scalars(select(Unit).order_by(Unit.code)).all()
-            self.unit_table.setRowCount(len(units))
-            for i, unit in enumerate(units):
-                self.unit_table.setItem(i, 0, QTableWidgetItem(unit.code))
-                self.unit_table.setItem(i, 1, QTableWidgetItem(unit.label_ar))
-                self.unit_table.setItem(i, 2, QTableWidgetItem(unit.dimension))
+        categories = {t[0]: t[3] for t in self.service.types_with_category()}
+        self._rows: dict[str, list[RefRow]] = {}
+        for kind, table_attr in TAB_KINDS:
+            rows = self.admin.rows(kind)
+            self._rows[kind] = rows
+            table: QTableWidget = getattr(self, table_attr)
+            if kind == "calendar":
+                week = {c[0]: c for c in self.service.calendar_rows()}
+                cells = [(r.code, r.name, str(week[r.id][4]), f"{week[r.id][3]:g}")
+                         for r in rows]
+            elif kind == "type":
+                cells = [(r.code, r.name, categories.get(r.id, "—")) for r in rows]
+            elif kind == "task":
+                cells = [(r.code, r.name, self.ctx.tr("master.minutes_value", value=r.extra)
+                          if r.extra != "—" else "—") for r in rows]
+            else:
+                cells = [(r.code, r.name, r.extra) for r in rows]
+            table.setRowCount(len(rows))
+            for i, (row, values) in enumerate(zip(rows, cells, strict=True)):
+                for col, text in enumerate(values):
+                    if col == 1 and not row.is_active:
+                        text = f"{text}  ({self.ctx.tr('master.archived')})"
+                    item = QTableWidgetItem(text)
+                    if not row.is_active:
+                        item.setForeground(self.palette().color(QPalette.ColorRole.PlaceholderText))
+                    table.setItem(i, col, item)
+            self._sync_buttons(kind)
+        # calendar commands work on the same row order as the other tabs
+        self._calendars = [(r.id,) for r in self._rows["calendar"]]
+
+    def _selected(self, kind: str) -> RefRow | None:
+        table: QTableWidget = getattr(self, dict(TAB_KINDS)[kind])
+        # The selection is the truth; the current row can lag behind it.
+        selected = table.selectionModel().selectedRows()
+        row = selected[0].row() if selected else table.currentRow()
+        rows = self._rows.get(kind, [])
+        return rows[row] if 0 <= row < len(rows) else None
+
+    def _sync_buttons(self, kind: str) -> None:
+        edit, archive = self._row_buttons[kind]
+        row = self._selected(kind)
+        edit.setEnabled(self.ctx.can_edit and row is not None)
+        archive.setEnabled(self.ctx.can_edit and row is not None)
+        archive.setText(self.ctx.tr("master.restore" if row is not None and not row.is_active
+                                    else "master.archive"))
+
+    def _edit_selected(self, kind: str) -> None:
+        row = self._selected(kind)
+        if row is None or not self.ctx.can_edit:
+            return
+        spec = KINDS[kind]
+        tr = self.ctx.tr
+        code = QLineEdit(row.code)
+        locked = spec.pk_is_code or self.admin.code_in_use(kind, row.id)
+        code.setReadOnly(locked)
+        if locked:
+            code.setToolTip(tr("master.code_locked_tip"))
+        fields: list[tuple[str, QWidget]] = [(tr("master.code"), code)]
+        editors = {}
+        for f in spec.fields:
+            value = row.values.get(f.attr)
+            if f.kind == "int":
+                editor = QSpinBox()
+                editor.setRange(f.minimum, f.maximum)
+                editor.setValue(int(value or 0))
+            else:
+                editor = QLineEdit(value or "")
+            editors[f.attr] = editor
+            fields.append((tr(f.label_key), editor))
+        dialog = _Dialog(self.ctx, tr("master.edit"), fields, self)
+        while dialog.exec() == QDialog.DialogCode.Accepted:
+            values = {a: (e.value() if isinstance(e, QSpinBox) else e.text())
+                      for a, e in editors.items()}
+            result = self.admin.update(self.ctx.current_user, kind, row.id, values,
+                                       code=None if locked else code.text())
+            if result.ok:
+                self.refresh()
+                return
+            QMessageBox.warning(self, tr("master.title"),
+                                tr(result.error_code or "err.invalid"))
+
+    def _toggle_archive(self, kind: str) -> None:
+        row = self._selected(kind)
+        if row is None or not self.ctx.can_edit:
+            return
+        result = self.admin.set_active(self.ctx.current_user, kind, row.id, not row.is_active)
+        self._done(result)
 
     # ---------------- commands ----------------
     def _new_location(self) -> None:
@@ -427,7 +484,7 @@ class MasterDataPage(BasePage):
         self._done(result)
         if result.ok:
             row = next(i for i, c in enumerate(self._calendars) if c[0] == result.value)
-            self.cal_table.selectRow(row)
+            self.cal_table.setCurrentCell(row, 0)
             self._edit_calendar_week()
 
     def _edit_calendar_week(self) -> None:

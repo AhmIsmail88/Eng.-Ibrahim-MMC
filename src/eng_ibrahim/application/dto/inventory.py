@@ -52,3 +52,13 @@ class PartUsageRow:
     technician: str | None
     supplier: str | None
     purchase_ref: str | None
+
+
+@dataclass(frozen=True)
+class ReturnableIssue:
+    movement_id: str
+    movement_no: str
+    wo_number: str
+    posted_at: str
+    issued: str
+    remaining: str

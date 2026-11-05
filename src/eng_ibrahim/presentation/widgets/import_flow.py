@@ -29,7 +29,10 @@ def run_import(parent: QWidget, ctx: AppContext, kind: str, title: str) -> bool:
         QMessageBox.warning(parent, title, tr("import.problems", valid=data.valid,
                                               total=data.total, detail=detail))
         return False
-    answer = QMessageBox.question(parent, title, tr("import.confirm", valid=data.valid))
+    message = tr("import.confirm", valid=data.valid)
+    if data.ignored_columns:  # review F-15: say what the file contains that will not be used
+        message += "\n\n" + tr("import.ignored", columns=", ".join(data.ignored_columns))
+    answer = QMessageBox.question(parent, title, message)
     if answer != QMessageBox.StandardButton.Yes:
         return False
     result = importer.commit(ctx.current_user, kind, Path(path))

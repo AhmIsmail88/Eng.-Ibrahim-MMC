@@ -166,3 +166,62 @@ def test_negative_adjustment_cannot_eat_reserved_stock(world):
     inventory.reserve(admin, part_id, wo_id, "4")
     assert inventory.adjust(admin, part_id, "-2", "جرد").error_code == "err.stock_insufficient"
     assert inventory.adjust(admin, part_id, "-1", "جرد").ok
+
+
+def _second_warehouse(ctx, masters, admin):
+    masters.create_warehouse(admin, "WH2", "مخزن الموقع")
+    return next(w[0] for w in InventoryService(ctx.db).warehouses() if w[1] == "WH2")
+
+
+def test_moves_respect_the_chosen_warehouse(world):
+    ctx, _auth, admin, masters, _a, _o, inventory, _asset, wo_id, part_id = world
+    wh2 = _second_warehouse(ctx, masters, admin)
+    assert inventory.receive(admin, part_id, "4", 100, warehouse_id=wh2).ok
+    main = {p.id: p for p in inventory.list_parts()}[part_id]
+    other = {p.id: p for p in inventory.list_parts(warehouse_id=wh2)}[part_id]
+    assert main.on_hand == "0" and other.on_hand == "4"
+    # Issuing from the default warehouse cannot use the other warehouse's stock.
+    assert inventory.issue_to_wo(admin, part_id, wo_id, "1").error_code == "err.stock_insufficient"
+    assert inventory.issue_to_wo(admin, part_id, wo_id, "1", warehouse_id=wh2).ok
+    assert len(inventory.movements(part_id=part_id, warehouse_id=wh2)) == 2
+
+
+def test_transfer_moves_quantity_and_value(world):
+    ctx, _auth, admin, masters, _a, _o, inventory, _asset, _wo, part_id = world
+    wh2 = _second_warehouse(ctx, masters, admin)
+    main_id = inventory.ensure_default_warehouse()
+    inventory.receive(admin, part_id, "10", 250)
+    assert inventory.transfer(admin, part_id, main_id, wh2, "4", "نقل للموقع").ok
+    main = {p.id: p for p in inventory.list_parts()}[part_id]
+    other = {p.id: p for p in inventory.list_parts(warehouse_id=wh2)}[part_id]
+    assert (main.on_hand, other.on_hand) == ("6", "4")
+    assert other.average_cost_minor == 250
+    types = [m.type for m in inventory.movements(part_id=part_id)]
+    assert "TRANSFER_OUT" in types and "TRANSFER_IN" in types
+    assert inventory.transfer(admin, part_id, main_id, wh2, "7").error_code \
+        == "err.stock_insufficient"
+    assert inventory.transfer(admin, part_id, main_id, main_id, "1").error_code \
+        == "err.transfer_same_warehouse"
+
+
+def test_scrap_needs_a_reason_and_spares_reserved_stock(world):
+    _ctx, _auth, admin, _m, _a, _o, inventory, _asset, wo_id, part_id = world
+    inventory.receive(admin, part_id, "5", 100)
+    inventory.reserve(admin, part_id, wo_id, "3")
+    assert inventory.scrap(admin, part_id, "1", "").error_code == "err.reason_required"
+    assert inventory.scrap(admin, part_id, "3", "تالف").error_code == "err.stock_insufficient"
+    assert inventory.scrap(admin, part_id, "2", "تالف بالرطوبة").ok
+    row = {p.id: p for p in inventory.list_parts()}[part_id]
+    assert row.on_hand == "3" and row.available == "0"
+
+
+def test_returnable_issues_track_what_is_left(world):
+    _ctx, _auth, admin, _m, _a, _o, inventory, _asset, wo_id, part_id = world
+    inventory.receive(admin, part_id, "5", 100)
+    issue = inventory.issue_to_wo(admin, part_id, wo_id, "3").value
+    assert [(r.movement_id, r.remaining) for r in inventory.returnable_issues(part_id)] \
+        == [(issue, "3")]
+    assert inventory.return_from_wo(admin, issue, "2", "زيادة").ok
+    assert inventory.returnable_issues(part_id)[0].remaining == "1"
+    assert inventory.return_from_wo(admin, issue, "1").ok
+    assert inventory.returnable_issues(part_id) == []

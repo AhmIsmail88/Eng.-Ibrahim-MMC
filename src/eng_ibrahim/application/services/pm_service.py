@@ -1,6 +1,7 @@
 """Preventive maintenance: plans, occurrences and work-order generation (SPEC 9)."""
 from __future__ import annotations
 
+import builtins
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
@@ -134,7 +135,7 @@ class PMService:
                lead_days: int = 7, description: str | None = None,
                completion_anchor_policy: str = "FROM_COMPLETION",
                catch_up_policy: str = "LATEST_ONLY_AND_LOG_SKIPPED",
-               tasks: list[tuple[str, bool]] | None = None) -> Result[str]:
+               tasks: builtins.list[tuple[str, bool]] | None = None) -> Result[str]:
         guard = _require_editor(actor)
         if not guard.ok:
             return Result.failure(guard.error_code or "err.permission_denied")
@@ -173,7 +174,7 @@ class PMService:
             next_due_date = None
             if needs_date:
                 next_due_date = sched.add_interval(
-                    base, int(calendar_interval_value), calendar_interval_unit).isoformat()
+                    base, int(calendar_interval_value or 0), calendar_interval_unit or "days").isoformat()
             next_due_meter = None
             if needs_meter:
                 base_meter = _dec(base_meter_value)
@@ -183,7 +184,7 @@ class PMService:
             plan = PMPlan(
                 plan_code=next_plain_number(s, "PM"), asset_id=asset_id, title=title,
                 description=description, strategy=strategy, trigger_policy=trigger_policy,
-                calendar_interval_value=(int(calendar_interval_value) if needs_date else None),
+                calendar_interval_value=(int(calendar_interval_value or 0) if needs_date else None),
                 calendar_interval_unit=(calendar_interval_unit if needs_date else None),
                 meter_id=meter_id if needs_meter else None,
                 meter_interval_value=(str(meter_interval_value) if needs_meter else None),
@@ -421,7 +422,7 @@ class PMService:
         SettingsService(self._db).set(AUTO_GENERATE, bool(enabled))
 
     def auto_generate_due(self, actor: AuthUser | None,
-                          today: date | None = None) -> Result[list[str]]:
+                          today: date | None = None) -> Result[builtins.list[str]]:
         """Generate draft work orders for plans that are due, at most once a day.
 
         A plan qualifies when it is Due/Overdue, or Due Soon with its date inside the
@@ -435,7 +436,7 @@ class PMService:
         settings = SettingsService(self._db)
         if not self.auto_enabled() or settings.get(AUTO_LAST_RUN) == today.isoformat():
             return Result.success([])
-        created: list[str] = []
+        created: builtins.list[str] = []
         for plan in self.list(status="Active"):
             if not self._auto_qualifies(plan, today):
                 continue
@@ -457,5 +458,6 @@ class PMService:
             return False
         due = sched.parse_date(plan.next_due_date)
         with self._db.session() as s:
-            lead = (s.get(PMPlan, plan.id).lead_days or 0)
+            row = s.get(PMPlan, plan.id)
+            lead = (row.lead_days or 0) if row else 0
         return due is not None and (due - today).days <= lead

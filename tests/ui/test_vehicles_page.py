@@ -76,3 +76,17 @@ def test_new_vehicle_keeps_the_form_open_on_error(world, monkeypatch):
     page._new()  # empty form: refused, dialog re-opened, then cancelled
     assert warnings == ["err.fleet_code_required"]
     assert page.table.rowCount() == 1
+
+
+def test_first_plan_is_selected_in_arabic_rtl(world, qapp):
+    """Generating from the plans tab works without clicking a row, in right-to-left."""
+    from PySide6.QtCore import Qt
+    ctx, vehicles, asset_id, page = world
+    vehicles.add_service_plan(ctx.current_user, asset_id, "زيت", "10000", 6)
+    previous = qapp.layoutDirection()
+    qapp.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+    try:
+        page.refresh()
+        assert page.plans.currentRow() == 0
+    finally:
+        qapp.setLayoutDirection(previous)

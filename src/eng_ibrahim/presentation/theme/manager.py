@@ -59,6 +59,7 @@ QPushButton:disabled, QToolButton:disabled, QLineEdit:disabled {{ color: {text2}
 QPushButton#primary {{ background: {blue}; color: {on_primary}; border: 1px solid {blue}; font-weight: 600; }}
 QPushButton#primary:hover {{ background: {teal}; border-color: {teal}; }}
 QPushButton#primary:disabled {{ background: {border}; border-color: {border}; color: {text2}; }}
+QToolButton#menuButton::menu-indicator {{ image: none; width: 0; }}
 QToolButton#headerIcon {{ min-height: 0; min-width: 0; padding: 7px; border: none;
     border-radius: 8px; background: transparent; }}
 QToolButton#headerIcon:hover {{ background: {bg}; }}

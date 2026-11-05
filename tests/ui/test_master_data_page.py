@@ -54,3 +54,44 @@ def test_currencies_units_and_calendar_week(qtbot, ctx, paths):
     assert "GBP" in codes
     cal_codes = [page.cal_table.item(i, 0).text() for i in range(page.cal_table.rowCount())]
     assert "SHIFT-A" in cal_codes
+
+
+def test_rows_can_be_edited_and_archived_from_the_tabs(qtbot, ctx, paths, monkeypatch):
+    from PySide6.QtWidgets import QDialog
+
+    from eng_ibrahim.application.services.master_data_service import MasterDataService
+    from eng_ibrahim.presentation.pages import master_data as md
+    _seed(ctx, paths)
+    MasterDataService(ctx.db).create_category(ctx.current_user, "PUMPX", "خطأ")
+    page = MasterDataPage(ctx)
+    qtbot.addWidget(page)
+    # Shown, as in the app: Qt's selectRow() needs visible columns (it ignores the call
+    # on an unshown table once an earlier test has switched the app to right-to-left).
+    page.show()
+    page.tabs.setCurrentIndex(1)  # the categories tab, where the user would be
+    qtbot.waitExposed(page)
+    page.refresh()
+    row = next(i for i, r in enumerate(page._rows["category"]) if r.code == "PUMPX")
+    page.cat_table.setCurrentCell(row, 0)
+    edit, archive = page._row_buttons["category"]
+    assert edit.isEnabled() and archive.text()
+
+    # Edit: the dialog opens with the current values; change code and name.
+    def fake_exec(dialog):
+        line_edits = dialog.findChildren(md.QLineEdit)
+        line_edits[0].setText("SUBM")
+        line_edits[1].setText("مضخات غاطسة")
+        return QDialog.DialogCode.Accepted
+    monkeypatch.setattr(md._Dialog, "exec", fake_exec)
+    page._edit_selected("category")
+    codes = {r.code: r.name for r in page._rows["category"]}
+    assert codes.get("SUBM") == "مضخات غاطسة" and "PUMPX" not in codes
+
+    # Archive: the row stays, marked archived, and the button offers Restore.
+    row = next(i for i, r in enumerate(page._rows["category"]) if r.code == "SUBM")
+    page.cat_table.setCurrentCell(row, 0)
+    page._toggle_archive("category")
+    row = next(i for i, r in enumerate(page._rows["category"]) if r.code == "SUBM")
+    assert "(" in page.cat_table.item(row, 1).text()
+    page.cat_table.setCurrentCell(row, 0)
+    assert page._row_buttons["category"][1].text() == ctx.tr("master.restore")

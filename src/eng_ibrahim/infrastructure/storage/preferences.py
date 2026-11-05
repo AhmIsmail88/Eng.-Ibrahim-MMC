@@ -15,6 +15,7 @@ DEFAULTS: dict[str, Any] = {
     "sidebar_collapsed": False,
     "window": None,  # {"x":..,"y":..,"w":..,"h":..}
     "last_username": "",  # prefill only; never a secret
+    "parts_warehouse": None,  # last warehouse chosen on the spare-parts screen
 }
 
 

@@ -55,9 +55,11 @@ class MasterDataService:
                 stmt = stmt.where(AssetCategory.is_active == 1)
             return [_lookup(r) for r in s.scalars(stmt)]
 
-    def types(self, category_id: str | None = None) -> list[Lookup]:
+    def types(self, category_id: str | None = None, active_only: bool = True) -> list[Lookup]:
         with self._db.session() as s:
             stmt = select(AssetType).order_by(AssetType.code)
+            if active_only:
+                stmt = stmt.where(AssetType.is_active == 1)
             if category_id:
                 stmt = stmt.where(AssetType.category_id == category_id)
             return [_lookup(r) for r in s.scalars(stmt)]
@@ -83,10 +85,14 @@ class MasterDataService:
                 stmt = stmt.where(OperatingCalendar.is_active == 1)
             return [_lookup(r) for r in s.scalars(stmt)]
 
-    def units(self) -> list[Lookup]:
+    def units(self, active_only: bool = False) -> list[Lookup]:
+        """All units by default (labels for existing records); active ones for new entries."""
         with self._db.session() as s:
+            stmt = select(Unit).order_by(Unit.code)
+            if active_only:
+                stmt = stmt.where(Unit.is_active == 1)
             return [Lookup(id=r.code, code=r.code, name_ar=r.label_ar, name_en=r.label_en)
-                    for r in s.scalars(select(Unit).order_by(Unit.code))]
+                    for r in s.scalars(stmt)]
 
     # ---------------- commands ----------------
     def create_location(self, actor: AuthUser | None, code: str, name_ar: str,

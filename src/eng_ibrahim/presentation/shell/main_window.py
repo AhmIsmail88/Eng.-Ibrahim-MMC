@@ -282,7 +282,9 @@ class MainWindow(QMainWindow):
             elif key == "nav.master_data":
                 page = MasterDataPage(self.ctx)
             elif key == "nav.audit":
-                page = AuditPage(self.ctx)
+                audit = AuditPage(self.ctx)
+                audit.open_requested.connect(self.open_record)
+                page = audit
             elif key == "nav.notifications":
                 page = NotificationsPage(self.ctx)
             elif key == "nav.users":

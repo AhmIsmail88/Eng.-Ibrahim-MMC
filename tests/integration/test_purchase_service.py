@@ -77,3 +77,27 @@ def test_failed_line_rolls_back_the_whole_receipt(world):
     part = {p.code: p for p in inventory.list_parts()}["BRG-1"]
     assert part.on_hand == "0"
     assert purchases.list()[0].status == "Approved"
+
+
+def test_multi_line_request_editable_while_draft(world):
+    _ctx, admin, supplier_id, part_id, inventory, purchases = world
+    other = inventory.create_part(admin, "BRG-3", "بلي 3", "pcs").value
+    seal = inventory.create_part(admin, "SEAL-3", "جلاند", "pcs").value
+    request_id = purchases.create(admin, supplier_id, [
+        (part_id, "5", 1000), (other, "2", 2500), (seal, "1", 12000)]).value
+    detail = purchases.detail(request_id)
+    assert len(detail.lines) == 3 and purchases.list()[0].total_minor == 22000
+    # Correct a quantity and drop a line before approval.
+    assert purchases.update(admin, request_id, supplier_id,
+                            [(part_id, "6", 1000), (other, "2", 2500)], "تعديل").ok
+    assert [(q, c) for _p, q, c in purchases.detail(request_id).lines] == [("6", 1000),
+                                                                            ("2", 2500)]
+    assert purchases.list()[0].total_minor == 11000
+    assert purchases.update(admin, request_id, supplier_id, []).error_code \
+        == "err.pr_lines_required"
+    purchases.approve(admin, request_id)
+    assert purchases.update(admin, request_id, supplier_id, [(part_id, "1", 1)]).error_code \
+        == "err.pr_status_invalid"
+    assert purchases.receive(admin, request_id).value == 2
+    stock = {p.code: p.on_hand for p in inventory.list_parts()}
+    assert stock["BRG-1"] == "6" and stock["BRG-3"] == "2"

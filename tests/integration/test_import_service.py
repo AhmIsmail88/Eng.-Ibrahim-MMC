@@ -91,3 +91,13 @@ def test_asset_import_validates_criticality(world):
                     encoding="utf-8")
     preview = service.preview("assets", path).value
     assert any(p.field == "criticality" for p in preview.problems)
+
+
+def test_preview_lists_columns_that_will_be_ignored(world):
+    _ctx, admin, service, tmp_path = world
+    path = tmp_path / "extra.csv"
+    path.write_text(HEADER.strip() + ",type_code,criticality\nPMP-7,مضخة,PUMP,MAIN,X,High\n",
+                    encoding="utf-8")
+    preview = service.preview("assets", path).value
+    assert preview.ok and preview.ignored_columns == ["type_code"]
+    assert service.commit(admin, "assets", path).value == 1

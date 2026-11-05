@@ -1,0 +1,1588 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ENG. IBRAHIM — دليل الاستخدام التفصيلي (كل وظيفة وكل خانة)</title>
+<style>
+  :root{
+    --navy:#0f2a44; --navy-2:#163a5c; --teal:#127c7a; --teal-2:#0e5f5e;
+    --sand:#f6f4ef; --paper:#ffffff; --ink:#1b2430; --muted:#5d6b7a;
+    --line:#dfe3e8; --amber:#b06a12; --amber-bg:#fdf3e3;
+    --red:#a92a22; --red-bg:#fbeceb; --green:#1f6b47; --green-bg:#eaf5ef;
+    --blue-bg:#eaf1f8; --shadow:0 1px 2px rgba(15,42,68,.06),0 8px 24px rgba(15,42,68,.06);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--sand); color:var(--ink);
+    font-family:"Segoe UI","Tahoma","Arial",sans-serif; font-size:16px; line-height:1.75;
+  }
+  a{color:var(--teal-2); text-decoration:none}
+  a:hover{text-decoration:underline}
+  .layout{display:grid; grid-template-columns:310px minmax(0,1fr); gap:0; align-items:start}
+
+  /* ---------- sidebar ---------- */
+  aside{
+    position:sticky; top:0; height:100vh; overflow:auto; background:var(--navy); color:#dfe8f1;
+    padding:22px 18px 40px; border-left:1px solid rgba(255,255,255,.08);
+  }
+  .brand{display:flex; gap:12px; align-items:center; margin-bottom:6px}
+  .brand .mark{
+    width:42px;height:42px;border-radius:11px;background:linear-gradient(145deg,#1d9a96,#0d5f5d);
+    display:grid;place-items:center;font-weight:800;color:#fff;letter-spacing:.5px;font-size:13px
+  }
+  .brand b{display:block;color:#fff;font-size:15px;line-height:1.3}
+  .brand span{display:block;color:#9fb4c8;font-size:12px}
+  .side-note{color:#9fb4c8;font-size:12.5px;margin:10px 0 16px}
+  .qbox{position:relative;margin:0 0 14px}
+  .qbox input{
+    width:100%;padding:9px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.18);
+    background:rgba(255,255,255,.07);color:#fff;font-family:inherit;font-size:13.5px
+  }
+  .qbox input::placeholder{color:#a9bccd}
+  .qbox input:focus{outline:2px solid #2b8f8b;outline-offset:1px;background:rgba(255,255,255,.1)}
+  nav ol{list-style:none;margin:0;padding:0;counter-reset:toc}
+  nav li{margin:0}
+  nav a{
+    display:flex;gap:9px;align-items:baseline;padding:6px 8px;border-radius:8px;
+    color:#cfdae5;font-size:13.5px;line-height:1.45
+  }
+  nav a:hover{background:rgba(255,255,255,.08);text-decoration:none;color:#fff}
+  nav a .n{color:#7fa3c2;font-variant-numeric:tabular-nums;font-size:12px;min-width:18px}
+  .side-actions{display:flex;gap:8px;margin-top:18px}
+  .side-actions button{
+    flex:1;padding:9px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.22);
+    background:transparent;color:#e8f0f7;cursor:pointer;font-family:inherit;font-size:12.5px
+  }
+  .side-actions button:hover{background:rgba(255,255,255,.1)}
+
+  /* ---------- main ---------- */
+  main{padding:34px 46px 90px; min-width:0}
+  .hero{
+    background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 55%,#1b4f6b 100%);
+    color:#fff;border-radius:20px;padding:34px 34px 28px;box-shadow:var(--shadow);position:relative;overflow:hidden
+  }
+  .hero:after{
+    content:"";position:absolute;inset:auto -60px -120px auto;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle,rgba(29,154,150,.55),rgba(29,154,150,0) 68%)
+  }
+  .hero .kicker{color:#9ecbc9;font-size:13px;letter-spacing:.4px;margin:0 0 8px}
+  .hero h1{margin:0 0 10px;font-size:31px;line-height:1.35;font-weight:800}
+  .hero p{margin:0;max-width:76ch;color:#dbe6ef;font-size:15px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+  .chip{
+    display:inline-block;padding:4px 11px;border-radius:999px;font-size:12.5px;
+    background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16);color:#eaf2f8
+  }
+  .notice{
+    margin:20px 0 0;padding:14px 16px;border-radius:12px;background:var(--blue-bg);
+    border:1px solid #c9d8e7;font-size:14px
+  }
+  .notice b{color:var(--navy)}
+
+  section{
+    background:var(--paper); border:1px solid var(--line); border-radius:var(--radius);
+    padding:26px 28px 22px; margin:26px 0; box-shadow:var(--shadow); scroll-margin-top:18px
+  }
+  section.hidden{display:none}
+  .sec-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:6px}
+  .sec-no{
+    flex:0 0 auto;width:44px;height:44px;border-radius:12px;background:var(--teal);color:#fff;
+    display:grid;place-items:center;font-weight:800;font-size:17px;margin-top:2px
+  }
+  h2{margin:0;font-size:23px;color:var(--navy);line-height:1.4}
+  .lead{margin:2px 0 0;color:var(--muted);font-size:14.5px}
+  h3{margin:26px 0 8px;font-size:17.5px;color:var(--navy-2)}
+  h3:first-of-type{margin-top:18px}
+  p{margin:8px 0}
+  ul,ol{margin:8px 0;padding-inline-start:22px}
+  li{margin:4px 0}
+  code,kbd{
+    font-family:"Consolas","Courier New",monospace;font-size:13.5px;background:#eef2f6;
+    border:1px solid #dde4ea;border-radius:6px;padding:1px 6px;direction:ltr;display:inline-block
+  }
+  kbd{background:#f4f6f8;border-bottom-width:2px}
+  .sub{font-size:13.5px;color:var(--muted)}
+
+  /* ---------- tables ---------- */
+  .tw{overflow:auto;border:1px solid var(--line);border-radius:12px;margin:12px 0 6px}
+  table{border-collapse:collapse;width:100%;min-width:640px;background:#fff;font-size:14px}
+  thead th{
+    background:#f1f5f8;color:var(--navy);text-align:right;font-weight:700;font-size:13.5px;
+    padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0
+  }
+  tbody td{padding:10px 12px;border-bottom:1px solid #edf0f3;vertical-align:top}
+  tbody tr:nth-child(even) td{background:#fbfcfd}
+  tbody tr:last-child td{border-bottom:0}
+  td.c,th.c{text-align:center}
+  .cell-name{font-weight:700;color:var(--navy);white-space:normal}
+  .req,.opt,.auto,.fmt,.no{
+    display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:700;
+    white-space:nowrap;line-height:1.7
+  }
+  .req{background:#fdecea;color:#9c2a21;border:1px solid #f5c9c4}
+  .opt{background:#eef2f5;color:#55636f;border:1px solid #dbe3ea}
+  .auto{background:#e8f4f1;color:#11615f;border:1px solid #c3e3df}
+  .fmt{background:#eef3fb;color:#1f4f86;border:1px solid #cddcf0;font-family:Consolas,monospace;direction:ltr}
+  .no{background:#fdf3e3;color:#8a5410;border:1px solid #f0dcba}
+
+  /* ---------- callouts ---------- */
+  .call{border-radius:12px;padding:13px 16px;margin:14px 0;font-size:14px;border:1px solid}
+  .call b{display:block;margin-bottom:2px}
+  .call.tip{background:var(--green-bg);border-color:#c6e2d3}
+  .call.warn{background:var(--amber-bg);border-color:#efd9b4}
+  .call.stop{background:var(--red-bg);border-color:#f0cbc7}
+  .call.info{background:var(--blue-bg);border-color:#cbd9e8}
+  .call.tip b{color:var(--green)} .call.warn b{color:var(--amber)}
+  .call.stop b{color:var(--red)} .call.info b{color:#204f80}
+
+  .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+  .tile{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fbfcfd}
+  .tile h4{margin:0 0 6px;color:var(--navy);font-size:15px}
+  .tile p{margin:0;font-size:13.5px;color:var(--muted)}
+  .steps{counter-reset:s;list-style:none;padding:0;margin:12px 0}
+  .steps li{position:relative;padding:8px 46px 8px 0;margin:0;border-bottom:1px dashed #e6eaee}
+  .steps li:last-child{border-bottom:0}
+  .steps li:before{
+    counter-increment:s;content:counter(s);position:absolute;right:0;top:8px;width:30px;height:30px;
+    border-radius:9px;background:#e8f4f1;color:var(--teal-2);display:grid;place-items:center;
+    font-weight:800;font-size:13px;border:1px solid #c9e4e0
+  }
+  .flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0;font-size:13.5px}
+  .flow span{background:#eef3f7;border:1px solid #dbe4ec;border-radius:8px;padding:3px 9px}
+  .flow i{color:#93a3b2;font-style:normal}
+
+  footer{margin-top:34px;color:var(--muted);font-size:13px;text-align:center}
+
+  /* ---------- print ---------- */
+  @media print{
+    aside,.side-actions,.qbox{display:none!important}
+    .layout{display:block}
+    main{padding:0}
+    body{background:#fff;font-size:11.5pt}
+    section{break-inside:auto;box-shadow:none;border:1px solid #ccc;margin:10px 0;padding:14px}
+    .hero{box-shadow:none;border-radius:0;background:#0f2a44!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    thead th{position:static}
+    a{color:#000;text-decoration:none}
+    .tw{overflow:visible}
+    table{min-width:0}
+  }
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr}
+    aside{position:relative;height:auto;border-left:0;border-bottom:1px solid rgba(255,255,255,.15)}
+    nav ol{columns:2;column-gap:18px}
+    main{padding:22px 18px 60px}
+    .grid2{grid-template-columns:1fr}
+    .hero h1{font-size:24px}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<aside>
+  <div class="brand">
+    <div class="mark">E·I</div>
+    <div><b>ENG. IBRAHIM</b><span>نظام إدارة الصيانة</span></div>
+  </div>
+  <p class="side-note">دليل تفصيلي: ماذا تكتب في كل خانة، وما يحدث بعد كل زر.</p>
+  <div class="qbox"><input id="q" type="search" placeholder="ابحث في الدليل… (مثال: كود الأصل)" autocomplete="off"></div>
+  <nav>
+    <ol id="toc">
+      <li><a href="#s0"><span class="n">0</span><span>قبل أن تبدأ</span></a></li>
+      <li><a href="#s1"><span class="n">1</span><span>أول تشغيل والدخول</span></a></li>
+      <li><a href="#s2"><span class="n">2</span><span>خريطة الشاشات</span></a></li>
+      <li><a href="#s3"><span class="n">3</span><span>لوحة المعلومات</span></a></li>
+      <li><a href="#s4"><span class="n">4</span><span>الأصول والمعدات</span></a></li>
+      <li><a href="#s5"><span class="n">5</span><span>ورشة السيارات</span></a></li>
+      <li><a href="#s6"><span class="n">6</span><span>بلاغات الأعطال</span></a></li>
+      <li><a href="#s7"><span class="n">7</span><span>أوامر الشغل</span></a></li>
+      <li><a href="#s8"><span class="n">8</span><span>الصيانة الوقائية</span></a></li>
+      <li><a href="#s9"><span class="n">9</span><span>تقويم الصيانة</span></a></li>
+      <li><a href="#s10"><span class="n">10</span><span>قوائم الفحص</span></a></li>
+      <li><a href="#s11"><span class="n">11</span><span>قطع الغيار والمخزون</span></a></li>
+      <li><a href="#s12"><span class="n">12</span><span>الموردون وطلبات الشراء</span></a></li>
+      <li><a href="#s13"><span class="n">13</span><span>الفنيون</span></a></li>
+      <li><a href="#s14"><span class="n">14</span><span>البيانات الأساسية</span></a></li>
+      <li><a href="#s15"><span class="n">15</span><span>المستخدمون والصلاحيات</span></a></li>
+      <li><a href="#s16"><span class="n">16</span><span>التقارير</span></a></li>
+      <li><a href="#s17"><span class="n">17</span><span>التنبيهات وسجل التتبع والبحث</span></a></li>
+      <li><a href="#s18"><span class="n">18</span><span>الإعدادات والنسخ الاحتياطي</span></a></li>
+      <li><a href="#s19"><span class="n">19</span><span>الاستيراد من Excel / CSV</span></a></li>
+      <li><a href="#s20"><span class="n">20</span><span>مرجع القيم المسموحة</span></a></li>
+      <li><a href="#s21"><span class="n">21</span><span>الأخطاء الشائعة وحلولها</span></a></li>
+      <li><a href="#s22"><span class="n">22</span><span>اختصارات لوحة المفاتيح</span></a></li>
+      <li><a href="#s23"><span class="n">23</span><span>قواعد ذهبية وممنوعات</span></a></li>
+      <li><a href="#s24"><span class="n">24</span><span>ورقة مرجعية سريعة</span></a></li>
+    </ol>
+  </nav>
+  <div class="side-actions">
+    <button onclick="window.print()">طباعة / PDF</button>
+    <button onclick="window.scrollTo({top:0,behavior:'smooth'})">أعلى الصفحة</button>
+  </div>
+</aside>
+
+<main>
+
+<div class="hero">
+  <p class="kicker">دليل مرجعي — الإصدار ٠٫١٠٫٠</p>
+  <h1>كل وظيفة في البرنامج، وكل خانة: ماذا تكتب فيها بالضبط</h1>
+  <p>
+    هذا الدليل يشرح شاشات <b>ENG. IBRAHIM</b> واحدة واحدة: الغرض من الشاشة، الأزرار،
+    ثم جدول لكل نموذج يوضح الخانة، والمثال، وهل هي إلزامية، وقاعدة التحقق.
+    مكتوب ليعمل بدون إنترنت ويُطبع كمرجع على المكتب.
+  </p>
+  <div class="meta">
+    <span class="chip">الإصدار 0.10.0</span>
+    <span class="chip">واجهة عربية RTL</span>
+    <span class="chip">قاعدة بيانات محلية SQLite</span>
+    <span class="chip">تاريخ التحرير: 4 نوفمبر 2026</span>
+  </div>
+</div>
+
+<div class="notice">
+  <b>هذا الملف توثيق فقط.</b> لم يُعدَّل أي كود أو ملف في البرنامج لإنشاء هذا الدليل،
+  وهو لا يغيّر أي بيانات. كل ما هو مكتوب هنا مأخوذ من شاشات النسخة الحالية وقواعد التحقق
+  الموجودة داخل البرنامج نفسه.
+</div>
+
+<!-- ======================= 0 ======================= -->
+<section id="s0" data-search="قبل أن تبدأ رموز الدليل إلزامي اختياري صيغة التاريخ المال الكمية">
+  <div class="sec-head">
+    <div class="sec-no">0</div>
+    <div>
+      <h2>قبل أن تبدأ: كيف تقرأ هذا الدليل</h2>
+      <p class="lead">اصطلاحات ثابتة تستخدمها كل الجداول التالية.</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="tile"><h4>الرموز</h4><p>
+      <span class="req">إلزامي</span> لا يُحفظ السجل بدونها.
+      <span class="opt">اختياري</span> اتركها فارغة إن لم تكن معروفة.
+      <span class="auto">تلقائي</span> يولّدها البرنامج ولا تُكتب.
+    </p></div>
+    <div class="tile"><h4>الاتجاه والأرقام</h4><p>
+      اكتب الأرقام بالأرقام اللاتينية <code>0-9</code> والنقطة العشرية <code>.</code>.
+      البحث يتسامح مع التشكيل والأرقام العربية، أما الحفظ فيحتفظ بما كتبته.
+    </p></div>
+    <div class="tile"><h4>التواريخ</h4><p>
+      كل حقول التاريخ في النماذج من نوع <span class="fmt">YYYY-MM-DD</span>،
+      مثل <code>2026-11-04</code>. لا تكتب أسماء شهور.
+    </p></div>
+    <div class="tile"><h4>المبالغ</h4><p>
+      المبالغ بعملة المحطة الأساسية (تُحدَّد في أول تشغيل، والافتراضي <b>EGP</b>)،
+      بخانتين عشريتين. الصفر في خانة التكلفة يعني «غير مسجّلة».
+    </p></div>
+    <div class="tile"><h4>الكميات</h4><p>
+      تُقبل الكسور حسب «خانات عشرية» المعرّفة للقطعة. لا تستخدم فاصلة الآلاف
+      ولا المسافة داخل الرقم.
+    </p></div>
+    <div class="tile"><h4>الأكواد</h4><p>
+      الكود يُقارَن بعد حذف المسافات الطرفية، ودون حساسية لحالة الحروف؛
+      لذلك <code>P-01</code> و<code>p-01</code> كود واحد. لا تكرّر الكود.
+    </p></div>
+  </div>
+
+  <div class="call info">
+    <b>أين تُحفظ البيانات؟</b>
+    في مجلد المستخدم، وليس في مجلد تثبيت البرنامج:
+    <code>%LOCALAPPDATA%\ENG_IBRAHIM\</code> — وفيه <code>data\maintenance.sqlite3</code>
+    و<code>backups\</code> و<code>logs\</code> و<code>attachments\</code>.
+    لذلك تحديث البرنامج أو إعادة تثبيته لا يمسح بياناتك.
+  </div>
+
+  <div class="call warn">
+    <b>قاعدة عامة للحفظ</b>
+    كل نموذج يُحفظ بزر «حفظ» أو <kbd>Ctrl</kbd>+<kbd>S</kbd>. إن ظهر خطأ أحمر تحت النموذج،
+    فالنموذج لم يُحفظ، والرسالة تخبرك بالخانة المطلوبة. صحّح ثم أعد الحفظ.
+  </div>
+</section>
+
+<!-- ======================= 1 ======================= -->
+<section id="s1" data-search="أول تشغيل معالج المحطة العملة المنطقة الزمنية كلمة المرور كود الاسترداد نسخ احتياطي دخول">
+  <div class="sec-head">
+    <div class="sec-no">1</div>
+    <div>
+      <h2>أول تشغيل والدخول</h2>
+      <p class="lead">معالج من ست خطوات يُنشئ قاعدة البيانات والحساب الأول. يظهر مرة واحدة فقط.</p>
+    </div>
+  </div>
+
+  <h3>خطوات المعالج</h3>
+  <ol class="steps">
+    <li><b>الترحيب:</b> اختر لغة الواجهة (العربية أو English). التغيير فوري.</li>
+    <li><b>المحطة:</b> اكتب اسم الورشة/المحطة بالعربية أو الإنجليزية — أحدهما يكفي.</li>
+    <li><b>العملة والوقت:</b> اختر العملة الأساسية والمنطقة الزمنية.</li>
+    <li><b>المستخدم المحلي:</b> اسم المستخدم والاسم الظاهر وكلمة مرور من ٨ أحرف على الأقل.</li>
+    <li><b>النسخ الاحتياطي:</b> مجلد النسخ (افتراضيًا داخل مجلد بيانات البرنامج).</li>
+    <li><b>الملخص:</b> مراجعة ثم «إنشاء قاعدة البيانات وإنهاء». يظهر بعدها <b>كود الاسترداد</b> مرة واحدة.</li>
+  </ol>
+
+  <h3>ماذا تكتب في كل خانة</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الخانة</th><th>ماذا تكتب فيها</th><th>مثال</th><th class="c">الحالة</th><th>القاعدة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">لغة الواجهة</td><td>العربية أو English</td><td>العربية</td><td class="c"><span class="req">إلزامي</span></td><td>تُطبَّق فورًا على المعالج.</td></tr>
+      <tr><td class="cell-name">اسم المحطة (بالعربية)</td><td>اسم الورشة كما تريده في التقارير</td><td>ورشة الصيانة المركزية</td><td class="c"><span class="req">إلزامي*</span></td><td>يكفي أحد الاسمين العربي أو الإنجليزي.</td></tr>
+      <tr><td class="cell-name">اسم المحطة (بالإنجليزية)</td><td>الاسم اللاتيني للمحطة</td><td>Central Maintenance Workshop</td><td class="c"><span class="opt">اختياري</span></td><td>يُستخدم عند تبديل اللغة للإنجليزية.</td></tr>
+      <tr><td class="cell-name">العملة الأساسية</td><td>كود عملة من القائمة</td><td>EGP</td><td class="c"><span class="req">إلزامي</span></td><td>لا يمكن تغييرها بعد وجود معاملات مالية؛ القائمة تشمل SAR وEGP وUSD وEUR وAED وQAR وKWD وBHD وOMR وJOD.</td></tr>
+      <tr><td class="cell-name">المنطقة الزمنية</td><td>منطقة IANA من القائمة</td><td>Africa/Cairo</td><td class="c"><span class="req">إلزامي</span></td><td>تُضبط افتراضيًا على منطقة الجهاز.</td></tr>
+      <tr><td class="cell-name">اسم المستخدم</td><td>اسم دخول لاتيني بسيط</td><td>admin</td><td class="c"><span class="req">إلزامي</span></td><td>الافتراضي <code>admin</code>؛ لا يُقبل فارغًا.</td></tr>
+      <tr><td class="cell-name">الاسم الظاهر</td><td>اسم صاحب الحساب كما يظهر في السجلات</td><td>م. إبراهيم</td><td class="c"><span class="opt">اختياري</span></td><td>إن تُرك فارغًا يُستخدم اسم المستخدم.</td></tr>
+      <tr><td class="cell-name">كلمة المرور</td><td>٨ أحرف على الأقل</td><td>—</td><td class="c"><span class="req">إلزامي</span></td><td>تُحفظ مشفّرة بـArgon2id ولا يمكن استرجاعها.</td></tr>
+      <tr><td class="cell-name">تأكيد كلمة المرور</td><td>نفس كلمة المرور حرفيًا</td><td>—</td><td class="c"><span class="req">إلزامي</span></td><td>اختلاف الكلمتين يمنع المتابعة.</td></tr>
+      <tr><td class="cell-name">مجلد النسخ الاحتياطية</td><td>مسار مجلد موجود أو يُنشأ</td><td>D:\Backups\ENG_IBRAHIM</td><td class="c"><span class="req">إلزامي</span></td><td>زر «استعراض…» يفتح اختيار المجلد. يُنصح بمجلد على قرص آخر.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="sub">* يكفي إدخال الاسم العربي أو الإنجليزي؛ وإلا ظهرت رسالة «أدخل اسم المحطة بالعربية أو الإنجليزية.»</p>
+
+  <div class="call stop">
+    <b>كود الاسترداد</b>
+    يظهر مرة واحدة بعد إنشاء قاعدة البيانات. دوّنه في مكان آمن قبل الضغط على «تم».
+    لا توجد طريقة لاستعراضه لاحقًا، ولا يمكن استرجاع كلمة المرور بدونه.
+  </div>
+
+  <h3>شاشة الدخول</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الخانة</th><th>ماذا تكتب فيها</th><th>مثال</th><th class="c">الحالة</th><th>ملاحظة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">اسم المستخدم</td><td>اسم الحساب الذي أنشأه المدير</td><td>admin</td><td class="c"><span class="req">إلزامي</span></td><td>يُقارَن كما هو.</td></tr>
+      <tr><td class="cell-name">كلمة المرور</td><td>كلمة المرور الخاصة بالحساب</td><td>—</td><td class="c"><span class="req">إلزامي</span></td><td>الخطأ يعني «اسم المستخدم أو كلمة المرور غير صحيحة».</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>
+    إذا كان الحساب معطّلًا تظهر رسالة «هذا الحساب معطّل. راجع مدير النظام.»،
+    وإذا كان البرنامج يعمل بالفعل تظهر رسالة أن النسخة مفتوحة بالفعل.
+    في قاعدة بيانات قديمة بحساب واحد بلا كلمة مرور، يفتح البرنامج مباشرة بدون شاشة دخول.
+  </p>
+
+  <div class="call tip">
+    <b>ما الذي يُضاف تلقائيًا؟</b>
+    البيانات المرجعية فقط: العملات، الوحدات، الفئات والأنواع، أكواد الأعطال، مكتبة المهام،
+    وموقع رئيسي باسم <code>MAIN</code>. لا تُضاف أصول أو أوامر شغل وهمية.
+  </div>
+</section>
+
+<!-- ======================= 2 ======================= -->
+<section id="s2" data-search="خريطة الشاشات القائمة الجانبية التنقل الأقسام">
+  <div class="sec-head">
+    <div class="sec-no">2</div>
+    <div>
+      <h2>خريطة الشاشات</h2>
+      <p class="lead">القائمة الجانبية بالترتيب، وماذا تفعل كل شاشة في سطر.</p>
+    </div>
+  </div>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الشاشة</th><th>الغرض</th><th>أهم ما تفعله</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">لوحة المعلومات</td><td>نظرة سريعة على الحالة</td><td>بطاقات أرقام + لوحة حالة المعدات</td></tr>
+      <tr><td class="cell-name">الأصول والمعدات</td><td>سجل كل معدة</td><td>إضافة/تعديل، عدادات، مرفقات، استيراد، ملصقات QR</td></tr>
+      <tr><td class="cell-name">أوامر الشغل</td><td>تنفيذ أعمال الصيانة</td><td>دورة الحالة، مهام، وقت، مصروفات، توقف، فحوص</td></tr>
+      <tr><td class="cell-name">الصيانة الوقائية</td><td>خطط الصيانة المجدولة</td><td>خطط بالتاريخ أو العداد، توليد أوامر، تخطي</td></tr>
+      <tr><td class="cell-name">الصيانة التصحيحية</td><td>بلاغات الأعطال</td><td>تسجيل عطل ثم تحويله لأمر شغل</td></tr>
+      <tr><td class="cell-name">تقويم الصيانة</td><td>عرض شهري للاستحقاقات</td><td>أكواد الخطط على أيام الشهر</td></tr>
+      <tr><td class="cell-name">ورشة السيارات</td><td>أسطول ومركبات</td><td>عداد، برنامج صيانة، تنبيهات مستندات</td></tr>
+      <tr><td class="cell-name">قوائم الفحص</td><td>قوالب فحص وتنفيذها</td><td>قالب بنود، تعبئة النتائج</td></tr>
+      <tr><td class="cell-name">قطع الغيار</td><td>المخزون وحركاته</td><td>استلام، صرف لأمر، تسوية، جرد، استيراد</td></tr>
+      <tr><td class="cell-name">الفنيون</td><td>سجل الفنيين وأجورهم</td><td>إضافة، تعطيل/تفعيل</td></tr>
+      <tr><td class="cell-name">البيانات الأساسية</td><td>القوائم المرجعية</td><td>مواقع، فئات، أنواع، أعطال، مهام، وحدات، مخازن، عملات، تقاويم</td></tr>
+      <tr><td class="cell-name">سجل التتبع</td><td>تاريخ التغييرات الحساسة</td><td>من فعل ماذا ومتى ولماذا (قراءة فقط)</td></tr>
+      <tr><td class="cell-name">التنبيهات</td><td>تنبيهات محسوبة</td><td>وقائية متأخرة، مخزون منخفض، أوامر متأخرة</td></tr>
+      <tr><td class="cell-name">الموردون</td><td>سجل الموردين</td><td>إضافة، تعطيل/تفعيل</td></tr>
+      <tr><td class="cell-name">طلبات الشراء</td><td>طلب ثم اعتماد ثم استلام</td><td>إدخال المخزن دفعة واحدة عند الاستلام</td></tr>
+      <tr><td class="cell-name">التقارير</td><td>معاينة وتصدير</td><td>ستة تقارير PDF/Excel</td></tr>
+      <tr><td class="cell-name">المستخدمون</td><td>الحسابات والصلاحيات</td><td>للمدير فقط</td></tr>
+      <tr><td class="cell-name">الإعدادات</td><td>اللغة والمظهر والنسخ</td><td>نسخة الآن، استعادة، توليد وقائي تلقائي</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="sub">شاشة «المستخدمون» لا تظهر إلا للمدير. وبقية الأزرار تظهر معطّلة عندما لا تملك صلاحية التعديل.</p>
+</section>
+
+<!-- ======================= 3 ======================= -->
+<section id="s3" data-search="لوحة المعلومات بطاقات مؤشرات لوحة حالة المعدات تعارض KPI">
+  <div class="sec-head">
+    <div class="sec-no">3</div>
+    <div>
+      <h2>لوحة المعلومات</h2>
+      <p class="lead">خمس بطاقات أرقام، ثم جدول «لوحة حالة المعدات».</p>
+    </div>
+  </div>
+
+  <h3>البطاقات</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>البطاقة</th><th>ماذا تعني بالضبط</th><th>عند الضغط عليها</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">إجمالي الأصول</td><td>عدد الأصول غير المؤرشفة (بما فيها المركبات)</td><td>تفتح شاشة الأصول</td></tr>
+      <tr><td class="cell-name">أوامر شغل مفتوحة</td><td>مفتوح + مُسند + قيد التنفيذ + معلّق (بدون المسودات)</td><td>تفتح أوامر الشغل مفلترة على المفتوح</td></tr>
+      <tr><td class="cell-name">صيانة وقائية متأخرة</td><td>خطط حالتها «متأخر»</td><td>تفتح الخطط المتأخرة فقط</td></tr>
+      <tr><td class="cell-name">صيانة وقائية قريبة</td><td>خطط حالتها «قريب» (داخل أيام التنبيه)</td><td>تفتح الخطط القريبة فقط</td></tr>
+      <tr><td class="cell-name">أصناف تحت الحد</td><td>أصناف وصل متاحها إلى حد إعادة الطلب أو أقل منه، أو رصيدها تحت الحد الأدنى</td><td>تفتح قطع الغيار على «الناقص فقط»</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="sub">ألوان البطاقات: أحمر = يحتاج تدخلًا، برتقالي = تحذير، أخضر = سليم، رمادي = محايد.</p>
+
+  <h3>لوحة حالة المعدات</h3>
+  <p>اختر «كل الفئات» أو فئة واحدة. الحالة في الجدول <b>مشتقة</b> من البيانات لا من حقل الحالة وحده:</p>
+  <ul>
+    <li><b>عاطلة:</b> الحالة المسجلة «خارج الخدمة» أو يوجد بلاغ عطل مفتوح.</li>
+    <li><b>تحت الصيانة:</b> الحالة المسجلة «تحت الصيانة» أو يوجد أمر شغل مفتوح.</li>
+    <li><b>تعمل:</b> لا بلاغ مفتوح ولا أمر شغل مفتوح.</li>
+    <li><b>خارج الخدمة (مشطوب):</b> الأصل مشطوب — ولا يظهر في اللوحة أصلًا.</li>
+  </ul>
+  <div class="tw">
+  <table>
+    <thead><tr><th>العمود</th><th>المعنى</th><th>ملاحظة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">الأصل</td><td>الكود — الاسم العربي</td><td>الترتيب: العاطل أولًا ثم تحت الصيانة ثم يعمل.</td></tr>
+      <tr><td class="cell-name">الفئة / الموقع</td><td>من البيانات الأساسية</td><td>—</td></tr>
+      <tr><td class="cell-name">الحالة</td><td>الحالة المشتقة</td><td>علامة ⚠ تعني تعارضًا بين الحالة المسجلة والواقع.</td></tr>
+      <tr><td class="cell-name">تاريخ العطل</td><td>تاريخ آخر بلاغ مفتوح</td><td>«—» إن لا بلاغ.</td></tr>
+      <tr><td class="cell-name">تاريخ الإصلاح</td><td>آخر إنهاء أمر تصحيحي أو آخر توقف منتهٍ</td><td>«—» إن لا يوجد.</td></tr>
+      <tr><td class="cell-name">أمر الشغل</td><td>رقم آخر أمر مفتوح للمعدة</td><td>«—» إن لا يوجد.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="call warn">
+    <b>ماذا يعني ⚠؟</b>
+    مثال: الحالة المسجلة «تعمل» لكن هناك بلاغ عطل مفتوح، أو «تحت الصيانة» لكن هناك عطل.
+    صحّح الحالة التشغيلية من ملف الأصل حتى تتطابق الصورة.
+  </div>
+</section>
+
+<!-- ======================= 4 ======================= -->
+<section id="s4" data-search="الأصول أصل جديد كود الأصل الفئة الموقع الأصل الأب الخطورة الحالة الفنية العداد QR استيراد مرفقات">
+  <div class="sec-head">
+    <div class="sec-no">4</div>
+    <div>
+      <h2>الأصول والمعدات</h2>
+      <p class="lead">السجل الرئيسي لكل معدة، وملفها الكامل: بيانات، عدادات، قطع، مرفقات، تاريخ.</p>
+    </div>
+  </div>
+
+  <h3>شريط الأدوات</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>العنصر</th><th>وظيفته</th><th>ملاحظة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">بحث</td><td>بالكود أو الاسم أو الرقم المسلسل</td><td>النتائج تتحدث أثناء الكتابة.</td></tr>
+      <tr><td class="cell-name">الفئة / الحالة</td><td>فلترة القائمة</td><td>«الكل» يعطّل الفلتر.</td></tr>
+      <tr><td class="cell-name">تضمين المؤرشف</td><td>إظهار الأصول المؤرشفة أيضًا</td><td>الأصل المؤرشف يبقى بتاريخه.</td></tr>
+      <tr><td class="cell-name">أصل جديد</td><td>فتح نموذج أصل</td><td>لا بد من وجود موقع واحد على الأقل.</td></tr>
+      <tr><td class="cell-name">استيراد أصول</td><td>من Excel أو CSV</td><td>التفاصيل في القسم 19.</td></tr>
+      <tr><td class="cell-name">ملصقات QR</td><td>صورة PNG بملصقات الأصول المعروضة</td><td>تطبع أول 40 أصلًا في القائمة.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>نموذج «أصل جديد» — ماذا تكتب في كل خانة</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الخانة</th><th>ماذا تكتب فيها</th><th>مثال</th><th class="c">الحالة</th><th>قاعدة التحقق</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">كود الأصل *</td><td>كود قصير ثابت للمعدة</td><td>P-001</td><td class="c"><span class="req">إلزامي</span></td><td>فريد على مستوى البرنامج؛ لا يتكرر مع كود مركبة. المسافات الطرفية تُحذف.</td></tr>
+      <tr><td class="cell-name">الاسم العربي *</td><td>اسم واضح بالعربية</td><td>مضخة مياه خام 1</td><td class="c"><span class="req">إلزامي</span></td><td>لا يُقبل فارغًا أو مسافات فقط.</td></tr>
+      <tr><td class="cell-name">الاسم الإنجليزي</td><td>الاسم اللاتيني</td><td>Raw Water Pump 1</td><td class="c"><span class="opt">اختياري</span></td><td>يظهر عند تبديل اللغة.</td></tr>
+      <tr><td class="cell-name">الفئة *</td><td>من البيانات الأساسية</td><td>PUMP — مضخات</td><td class="c"><span class="req">إلزامي</span></td><td>يجب أن تكون فئة موجودة.</td></tr>
+      <tr><td class="cell-name">النوع</td><td>قائمة مفلترة بالفئة المختارة</td><td>PUMP-CENT</td><td class="c"><span class="opt">اختياري</span></td><td>إن اخترت نوعًا لا يتبع الفئة يُرفض الحفظ.</td></tr>
+      <tr><td class="cell-name">الموقع *</td><td>موقع نشط</td><td>MAIN — الموقع الرئيسي</td><td class="c"><span class="req">إلزامي</span></td><td>الموقع المؤرشف/غير الموجود يُرفض.</td></tr>
+      <tr><td class="cell-name">الأصل الأب</td><td>معدة تحتوي هذه المعدة</td><td>P-000</td><td class="c"><span class="opt">اختياري</span></td><td>لا يجوز أن يكون الأصل أبًا لنفسه أو أن يخلق دورة.</td></tr>
+      <tr><td class="cell-name">درجة الخطورة</td><td>أثر العطل على التشغيل</td><td>عالية</td><td class="c"><span class="opt">اختياري</span></td><td>القيم: حرجة/عالية/متوسطة/منخفضة. الافتراضي في النافذة «حرجة» — غيّرها إن لزم.</td></tr>
+      <tr><td class="cell-name">الحالة التشغيلية</td><td>وضع المعدة الآن</td><td>تعمل</td><td class="c"><span class="opt">اختياري</span></td><td>تعمل/احتياطي/خارج الخدمة/تحت الصيانة/مشطوب. الافتراضي «تعمل».</td></tr>
+      <tr><td class="cell-name">الحالة الفنية</td><td>تقييم الحالة الميكانيكية</td><td>جيدة</td><td class="c"><span class="opt">اختياري</span></td><td>ممتازة/جيدة/مقبولة/ضعيفة/غير مقيّمة. الافتراضي في النافذة «ممتازة».</td></tr>
+      <tr><td class="cell-name">استراتيجية الصيانة</td><td>كيف تُصان المعدة</td><td>وقائية</td><td class="c"><span class="opt">اختياري</span></td><td>وقائية/تصحيحية/وقائية وتصحيحية/حتى التعطل. الافتراضي «وقائية».</td></tr>
+      <tr><td class="cell-name">نوع العداد</td><td>نوع القياس التراكمي</td><td>ساعات تشغيل</td><td class="c"><span class="opt">اختياري</span></td><td>ساعات تشغيل/كيلومترات/دورات/بدون. <b>الافتراضي في النافذة «ساعات تشغيل»</b> — اختر «بدون» إن لم يكن للمعدة عداد.</td></tr>
+      <tr><td class="cell-name">وحدة العداد</td><td>وحدة القراءة الافتراضية</td><td>h</td><td class="c"><span class="opt">اختياري</span></td><td>من قائمة الوحدات. تُستخدم عند إنشاء عداد الأصل.</td></tr>
+      <tr><td class="cell-name">الشركة المصنعة</td><td>اسم الصانع</td><td>Grundfos</td><td class="c"><span class="opt">اختياري</span></td><td>نص حر.</td></tr>
+      <tr><td class="cell-name">الموديل</td><td>طراز المعدة</td><td>NK 65-200</td><td class="c"><span class="opt">اختياري</span></td><td>نص حر.</td></tr>
+      <tr><td class="cell-name">الرقم المسلسل</td><td>رقم المصنع</td><td>SN-99312</td><td class="c"><span class="opt">اختياري</span></td><td>نص حر، ويُبحث فيه.</td></tr>
+      <tr><td class="cell-name">تاريخ التشغيل</td><td>تاريخ بدء التشغيل</td><td>2024-03-01</td><td class="c"><span class="opt">اختياري</span></td><td><span class="fmt">YYYY-MM-DD</span></td></tr>
+      <tr><td class="cell-name">تاريخ الشراء</td><td>تاريخ الشراء</td><td>2024-02-15</td><td class="c"><span class="opt">اختياري</span></td><td><span class="fmt">YYYY-MM-DD</span></td></tr>
+      <tr><td class="cell-name">تكلفة الشراء</td><td>المبلغ المدفوع</td><td>125000.00</td><td class="c"><span class="opt">اختياري</span></td><td>لا تقبل سالبًا؛ 0 = غير مسجّلة. بعملة المحطة.</td></tr>
+      <tr><td class="cell-name">تكلفة الاستبدال</td><td>تكلفة شراء بديل اليوم</td><td>150000.00</td><td class="c"><span class="opt">اختياري</span></td><td>لا تقبل سالبًا؛ 0 = غير مسجّلة.</td></tr>
+      <tr><td class="cell-name">انتهاء الضمان</td><td>آخر يوم للضمان</td><td>2026-02-15</td><td class="c"><span class="opt">اختياري</span></td><td><span class="fmt">YYYY-MM-DD</span></td></tr>
+      <tr><td class="cell-name">ملاحظات</td><td>أي تفاصيل لا تجد لها خانة</td><td>يعمل بالتبادل مع P-002</td><td class="c"><span class="opt">اختياري</span></td><td>نص طويل.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="call tip">
+    <b>ترتيب الإدخال الصحيح</b>
+    البيانات الأساسية (موقع + فئة) ← أصل جديد ← عدادات وقراءات ← خطط صيانة ← أوامر شغل.
+    النموذج لا يعمل بدون موقع واحد على الأقل، ويظهر تنبيه بذلك.
+  </div>
+
+  <h3>تبويبات ملف الأصل</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>التبويب</th><th>ماذا يعرض</th><th>ماذا تفعل فيه</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">نظرة عامة</td><td>كل بيانات النموذج + التكاليف</td><td>«تعديل أصل» لتغييرها، أو «أرشفة».</td></tr>
+      <tr><td class="cell-name">البيانات الفنية</td><td>جدول البند/القيمة</td><td>«إضافة بند»: يطلب اسم البند ثم القيمة. البند المتكرر يُحدَّث.</td></tr>
+      <tr><td class="cell-name">العدادات</td><td>كود العداد، النوع، آخر قراءة، تاريخها</td><td>«إضافة قراءة» — التفاصيل أدناه.</td></tr>
+      <tr><td class="cell-name">القطع المستخدمة</td><td>حركات صرف قطع لهذا الأصل</td><td>قراءة فقط: القطعة، الكمية، القيمة، التاريخ، الفني، أمر الشغل، المورد.</td></tr>
+      <tr><td class="cell-name">المرفقات</td><td>ملفات مرتبطة بالأصل</td><td>«إضافة مرفق» ثم «فتح».</td></tr>
+      <tr><td class="cell-name">التاريخ</td><td>تغييرات الحالة والموقع</td><td>قراءة فقط.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>نافذة «قراءة عداد جديدة»</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الخانة</th><th>ماذا تكتب فيها</th><th>مثال</th><th class="c">الحالة</th><th>القاعدة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">العداد</td><td>اختر عداد الأصل</td><td>HOURS (h)</td><td class="c"><span class="req">إلزامي</span></td><td>إن كان للأصل نوع عداد ووحدة عداد ولم يكن له عداد بعد، ينشئه البرنامج تلقائيًا (HOURS أو KM أو CYC). وإن لم يكن له نوع عداد تظهر رسالة «لا توجد عدادات لهذا الأصل».</td></tr>
+      <tr><td class="cell-name">القراءة</td><td>القراءة التراكمية الحالية</td><td>1240.5</td><td class="c"><span class="req">إلزامي</span></td><td>رقم لا يقل عن آخر قراءة. القراءة الأقل تُرفض.</td></tr>
+      <tr><td class="cell-name">تاريخ القراءة</td><td>تاريخ أخذ القراءة</td><td>2026-11-04</td><td class="c"><span class="req">إلزامي</span></td><td>الافتراضي اليوم.</td></tr>
+      <tr><td class="cell-name">ملاحظات</td><td>سبب القراءة أو ملاحظة</td><td>قراءة أسبوعية</td><td class="c"><span class="opt">اختياري</span></td><td>نص حر.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="call warn">
+    <b>قاعدة العدادات</b>
+    العداد تراكمي: لا تُقبل قراءة أقل من السابقة، ولا قراءة تُخالف ترتيب التواريخ.
+    لا تُدخل قراءة قديمة بتاريخ لاحق لتصحيحها. التصحيح المبرر يحتاج مسارًا خاصًا غير متاح في الواجهة الحالية.
+  </div>
+
+  <h3>المرفقات و QR والأرشفة</h3>
+  <ul>
+    <li><b>المرفقات:</b> تُقبل <code>png jpg jpeg webp pdf docx xlsx txt</code> بحد أقصى 20 ميجابايت للملف. تُحفظ داخل مجلد بيانات البرنامج، ويُسجَّل الاسم والحجم والتاريخ.</li>
+    <li><b>ملصقات QR:</b> تُنتج صورة PNG لملصقات أول 40 أصلًا معروضًا، وتُحفظ بالمكان الذي تختاره، مع اسم يُبدأ بـ<code>ENG_IBRAHIM_QR</code>.</li>
+    <li><b>الأرشفة:</b> لا يوجد حذف. «أرشفة» تُخفي الأصل من القوائم النشطة وتُبقي تاريخه؛ و«استرجاع» تُعيده.</li>
+  </ul>
+</section>
+
+<!-- ======================= 5 ======================= -->
+<section id="s5" data-search="ورشة السيارات المركبات الأسطول اللوحة الشاسيه الوقود التأمين الترخيص برنامج الصيانة عداد">
+  <div class="sec-head">
+    <div class="sec-no">5</div>
+    <div>
+      <h2>ورشة السيارات</h2>
+      <p class="lead">المركبة أصل من فئة «سيارات ومعدات متحركة» بعدّاد كيلومترات وبرنامج صيانة خاص.</p>
+    </div>
+  </div>
+
+  <p>
+    كل مركبة تُنشئ أصلًا مرتبطًا تلقائيًا بفئة <code>VEH</code> ونوع عداد «كيلومترات».
+    لذلك <b>كود الأسطول</b> يجب ألا يتكرر مع أي كود أصل آخر.
+  </p>
+
+  <h3>نموذج «مركبة جديدة»</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الخانة</th><th>ماذا تكتب فيها</th><th>مثال</th><th class="c">الحالة</th><th>القاعدة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">كود الأسطول *</td><td>كود المركبة</td><td>V-012</td><td class="c"><span class="req">إلزامي</span></td><td>فريد بين الأصول والمركبات.</td></tr>
+      <tr><td class="cell-name">رقم اللوحة</td><td>اللوحة كما هي</td><td>أ ب ج 1234</td><td class="c"><span class="opt">اختياري</span></td><td>يُبحث به في البحث العام.</td></tr>
+      <tr><td class="cell-name">الاسم بالعربي *</td><td>نوع/استخدام المركبة</td><td>سيارة نقل خفيف</td><td class="c"><span class="req">إلزامي</span></td><td>لا يُقبل فارغًا.</td></tr>
+      <tr><td class="cell-name">الاسم بالإنجليزي</td><td>الاسم اللاتيني</td><td>Light Pickup</td><td class="c"><span class="opt">اختياري</span></td><td>—</td></tr>
+      <tr><td class="cell-name">الموقع *</td><td>موقع نشط</td><td>MAIN</td><td class="c"><span class="req">إلزامي</span></td><td>لا بد من وجود موقع.</td></tr>
+      <tr><td class="cell-name">الشركة المصنعة</td><td>الصانع</td><td>Toyota</td><td class="c"><span class="opt">اختياري</span></td><td>—</td></tr>
+      <tr><td class="cell-name">الموديل</td><td>الطراز</td><td>Hilux 2022</td><td class="c"><span class="opt">اختياري</span></td><td>—</td></tr>
+      <tr><td class="cell-name">سنة الصنع</td><td>سنة مكوّنة من 4 أرقام</td><td>2022</td><td class="c"><span class="opt">اختياري</span></td><td>من 0 (تعني «—») حتى السنة القادمة.</td></tr>
+      <tr><td class="cell-name">رقم الشاسيه (VIN)</td><td>رقم الهيكل</td><td>MR0HA8CD100123456</td><td class="c"><span class="opt">اختياري</span></td><td>نص لاتيني.</td></tr>
+      <tr><td class="cell-name">الوقود</td><td>نوع الوقود</td><td>سولار</td><td class="c"><span class="opt">اختياري</span></td><td>سولار/بنزين/كهرباء/هجين/غاز طبيعي/أخرى.</td></tr>
+      <tr><td class="cell-name">قراءة العداد الحالية</td><td>قراءة الكيلومترات عند التسجيل</td><td>84500</td><td class="c"><span class="opt">اختياري</span></td><td>تُدخل مرة واحدة عند الإنشاء فقط، وتُنشئ أول قراءة عداد.</td></tr>
+      <tr><td class="cell-name">الإدارة</td><td>الإدارة المالكة/المستخدمة</td><td>إدارة التشغيل</td><td class="c"><span class="opt">اختياري</span></td><td>نص حر.</td></tr>
+      <tr><td class="cell-name">السائق المسؤول (وظيفة)</td><td>وظيفة السائق لا اسمه</td><td>سائق وردية أ</td><td class="c"><span class="opt">اختياري</span></td><td>نص حر.</td></tr>
+      <tr><td class="cell-name">جهة الصيانة</td><td>من يتولى صيانتها</td><td>ورشة الأسطول</td><td class="c"><span class="opt">اختياري</span></td><td>نص حر.</td></tr>
+      <tr><td class="cell-name">انتهاء التأمين</td><td>تاريخ انتهاء الوثيقة</td><td>2027-01-31</td><td class="c"><span class="opt">اختياري</span></td><td>فعّل مربع الاختيار أولًا ثم اكتب التاريخ. <span class="fmt">YYYY-MM-DD</span></td></tr>
+      <tr><td class="cell-name">انتهاء الترخيص</td><td>تاريخ انتهاء الرخصة</td><td>2026-12-15</td><td class="c"><span class="opt">اختياري</span></td><td>فعّل مربع الاختيار أولًا. <span class="fmt">YYYY-MM-DD</span></td></tr>
+      <tr><td class="cell-name">ملاحظات</td><td>أي تفاصيل إضافية</td><td>تحتاج إصلاح تكييف</td><td class="c"><span class="opt">اختياري</span></td><td>نص طويل.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>الأعمدة والتنبيهات</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>العمود</th><th>المعنى</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">كود الأسطول / اللوحة / الاسم</td><td>تعريف المركبة</td></tr>
+      <tr><td class="cell-name">العداد</td><td>آخر قراءة كيلومترات ووحدتها</td></tr>
+      <tr><td class="cell-name">الصيانة القادمة</td><td>أقرب استحقاق بين كل خطط الصيانة (تاريخ و/أو كيلومترات)</td></tr>
+      <tr><td class="cell-name">تنبيهات</td><td>حالة الخدمة (قريب/مستحق/متأخر) + مستندات «قاربت على الانتهاء» أو «منتهية»</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>
+    المستندات تُعدّ «قاربت على الانتهاء» إذا كان الانتهاء خلال <b>30 يومًا</b>،
+    و«منتهية» إذا مرّ التاريخ. زر/مربع «التي تحتاج متابعة فقط» يعرض ما عليه تنبيه فقط.
+  </p>
+
+  <h3>نافذتان مختصرتان</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>النافذة</th><th>الخانة</th><th>ماذا تكتب</th><th>القاعدة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name" rowspan="3">تسجيل قراءة عداد</td><td>القراءة (كم)</td><td>القراءة الحالية</td><td>لا تقل عن آخر قراءة؛ أقل منها يُرفض.</td></tr>
+      <tr><td>تاريخ القراءة</td><td>تاريخها</td><td>الافتراضي اليوم. لليوم الحالي يُسجَّل الوقت أيضًا لترتيب القراءات.</td></tr>
+      <tr><td>ملاحظات</td><td>سبب/ملاحظة</td><td>اختياري.</td></tr>
+      <tr><td class="cell-name" rowspan="3">إضافة خدمة</td><td>الخدمة</td><td>اختر خدمة جاهزة أو اكتب اسمًا</td><td>القائمة تشمل الزيت والفتيس والفرامل والسيور والتبريد والبطارية والإطارات والميزان والتكييف والفحص الشامل والمستندات.</td></tr>
+      <tr><td>كل (كم)</td><td>مثل 10000</td><td>اتركها فارغة إذا كانت الخدمة زمنية فقط.</td></tr>
+      <tr><td>كل (شهر)</td><td>مثل 6</td><td>اتركها 0 إذا كانت الخدمة بالكيلومترات فقط. يجب تحديد أحدهما على الأقل.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="sub">الخدمة تستحق عند تحقق أول شرط (كيلومترات أو أشهر). زر «توليد أمر شغل» ينشئ أمرًا وقائيًا من الخطة المحددة.</p>
+</section>
+
+<!-- ======================= 6 ======================= -->
+<section id="s6" data-search="بلاغات الأعطال الصيانة التصحيحية العَرَض الأولوية تحويل أمر شغل">
+  <div class="sec-head">
+    <div class="sec-no">6</div>
+    <div>
+      <h2>بلاغات الأعطال (الصيانة التصحيحية)</h2>
+      <p class="lead">تسجيل العطل أولًا، ثم فحصه، ثم تحويله لأمر شغل.</p>
+    </div>
+  </div>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>الخانة</th><th>ماذا تكتب فيها</th><th>مثال</th><th class="c">الحالة</th><th>القاعدة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">الأصل</td><td>المعدة المعطلة</td><td>P-001 — مضخة مياه خام 1</td><td class="c"><span class="req">إلزامي</span></td><td>من الأصول النشطة.</td></tr>
+      <tr><td class="cell-name">وصف العَرَض *</td><td>ما تراه/تسمعه بالضبط</td><td>تسريب من السيل مع اهتزاز عند البدء</td><td class="c"><span class="req">إلزامي</span></td><td>لا يُقبل فارغًا. اكتب العَرَض لا التشخيص.</td></tr>
+      <tr><td class="cell-name">وقت الملاحظة *</td><td>تاريخ ملاحظة العطل</td><td>2026-11-04</td><td class="c"><span class="req">إلزامي</span></td><td>الافتراضي اليوم. <span class="fmt">YYYY-MM-DD</span></td></tr>
+      <tr><td class="cell-name">الأولوية</td><td>أثر العطل</td><td>متوسطة</td><td class="c"><span class="opt">اختياري</span></td><td>حرجة/عالية/متوسطة/منخفضة. الافتراضي «متوسطة».</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>الأزرار ودورة البلاغ</h3>
+  <div class="flow">
+    <span>جديد</span><i>←</i><span>قيد الفحص</span><i>←</i><span>تحوّل لأمر شغل</span>
+    <i>أو</i><span>تم حله</span><i>أو</i><span>ملغى</span>
+  </div>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الزر</th><th>يعمل عندما</th><th>النتيجة</th><th>مطلوب منه</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">قيد الفحص</td><td>الحالة «جديد»</td><td>ينقل البلاغ إلى قيد الفحص</td><td>لا شيء</td></tr>
+      <tr><td class="cell-name">تحويل لأمر شغل</td><td>جديد أو قيد الفحص</td><td>ينشئ أمر شغل تصحيحي مرتبطًا بالبلاغ ويظهر رقمه</td><td>لا يُحوَّل مرتين</td></tr>
+      <tr><td class="cell-name">إغلاق البلاغ</td><td>جديد أو قيد الفحص</td><td>يعلن حله بلا أمر شغل</td><td>—</td></tr>
+      <tr><td class="cell-name">إلغاء</td><td>جديد أو قيد الفحص</td><td>يلغي البلاغ</td><td>سبب مكتوب — لا يُقبل فارغًا</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="sub">أرقام البلاغات تلقائية بالشكل <code>BR-2026-000001</code>. لا تكتبها.</p>
+</section>
+
+<!-- ======================= 7 ======================= -->
+<section id="s7" data-search="أوامر الشغل المهام ساعات العمل المصروفات التوقف الإغلاق إعادة الفتح التكلفة الفني">
+  <div class="sec-head">
+    <div class="sec-no">7</div>
+    <div>
+      <h2>أوامر الشغل</h2>
+      <p class="lead">قلب التشغيل: حالة، مهام، وقت فنيين، قطع، مصروفات، توقف، وفحوص.</p>
+    </div>
+  </div>
+
+  <h3>نموذج «أمر شغل جديد»</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الخانة</th><th>ماذا تكتب فيها</th><th>مثال</th><th class="c">الحالة</th><th>القاعدة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">الأصل</td><td>المعدة المستهدفة</td><td>P-001</td><td class="c"><span class="req">إلزامي</span></td><td>لا بد من وجود أصول نشطة.</td></tr>
+      <tr><td class="cell-name">النوع</td><td>تصنيف العمل</td><td>تصحيحية</td><td class="c"><span class="opt">اختياري</span></td><td>تصحيحية/وقائية/فحص/أخرى. الافتراضي «تصحيحية».</td></tr>
+      <tr><td class="cell-name">العنوان *</td><td>ملخص العمل في سطر</td><td>تغيير سيل مضخة المياه الخام</td><td class="c"><span class="req">إلزامي</span></td><td>لا يُقبل فارغًا أو مسافات فقط.</td></tr>
+      <tr><td class="cell-name">الوصف</td><td>تفاصيل إضافية</td><td>تسريب مستمر، يلزم عزل الخط قبل الفك</td><td class="c"><span class="opt">اختياري</span></td><td>نص طويل.</td></tr>
+      <tr><td class="cell-name">الأولوية</td><td>درجة الإلحاح</td><td>متوسطة</td><td class="c"><span class="opt">اختياري</span></td><td>الافتراضي «متوسطة».</td></tr>
+      <tr><td class="cell-name">الاستحقاق</td><td>آخر موعد مطلوب</td><td>2026-11-07</td><td class="c"><span class="opt">اختياري</span></td><td>الافتراضي اليوم + 3 أيام. <span class="fmt">YYYY-MM-DD</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="sub">كل أمر جديد يُنشأ بحالة «مسودة» ويأخذ رقمًا تلقائيًا بالشكل <code>WO-2026-000001</code>.</p>
+
+  <h3>دورة الحالة — من يفعل ماذا</h3>
+  <div class="flow">
+    <span>مسودة</span><i>←</i><span>مفتوح</span><i>←</i><span>مُسند</span><i>←</i><span>قيد التنفيذ</span><i>←</i><span>منتهٍ</span><i>←</i><span>مغلق</span>
+  </div>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الزر</th><th>من حالة</th><th>إلى</th><th>ما يُطلب منك</th><th>الصلاحية</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">اعتماد</td><td>مسودة</td><td>مفتوح</td><td>لا شيء (الأصل والعنوان والأولوية موجودة)</td><td>تعديل</td></tr>
+      <tr><td class="cell-name">إسناد</td><td>مفتوح</td><td>مُسند</td><td>اختيار فني نشط من قائمة</td><td>تعديل</td></tr>
+      <tr><td class="cell-name">بدء</td><td>مفتوح أو مُسند</td><td>قيد التنفيذ</td><td>لا شيء</td><td>تعديل</td></tr>
+      <tr><td class="cell-name">إيقاف مؤقت</td><td>مُسند أو قيد التنفيذ</td><td>معلّق</td><td>سبب مكتوب</td><td>تعديل</td></tr>
+      <tr><td class="cell-name">استئناف</td><td>معلّق</td><td>قيد التنفيذ</td><td>لا شيء</td><td>تعديل</td></tr>
+      <tr><td class="cell-name">إنهاء</td><td>قيد التنفيذ</td><td>منتهٍ</td><td>الإجابة على «هل عاد الأصل للخدمة؟» + كل المهام الإلزامية مجابة</td><td>تعديل</td></tr>
+      <tr><td class="cell-name">إغلاق</td><td>منتهٍ</td><td>مغلق</td><td>ملاحظات الإغلاق (نص حر)</td><td>مدير</td></tr>
+      <tr><td class="cell-name">إعادة فتح</td><td>منتهٍ أو مغلق</td><td>قيد التنفيذ</td><td>سبب مكتوب</td><td>مدير</td></tr>
+      <tr><td class="cell-name">إلغاء</td><td>مسودة أو مفتوح أو مُسند</td><td>ملغى</td><td>سبب مكتوب</td><td>تعديل</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="call warn">
+    <b>الأمر المغلق أو الملغى للقراءة فقط</b>
+    لا مهام ولا ساعات ولا مصروفات ولا صرف قطع بعد الإغلاق أو الإلغاء. إن احتجت عملًا إضافيًا،
+    أعد الفتح بسبب (مدير) أو أنشئ أمرًا جديدًا.
+  </div>
+
+  <h3>تبويب المهام</h3>
+  <ul>
+    <li>«إضافة مهمة» يطلب <b>عنوان المهمة</b> فقط، والمهمة تُسجَّل <b>إلزامية</b> افتراضيًا.</li>
+    <li>عمود «إلزامية» يظهر ✓ للمهمة الإلزامية. لا يمكن الإنهاء قبل الإجابة على كل إلزامية.</li>
+    <li>«تعليم كمُنجزة / تراجع» يبدّل حالة المهمة المحددة.</li>
+  </ul>
+
+  <h3>تبويب ساعات العمل</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الخانة</th><th>ماذا تكتب فيها</th><th>مثال</th><th>القاعدة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">الفني</td><td>اختر من الفنيين النشطين</td><td>م. أحمد</td><td>لا بد من وجود فنيين.</td></tr>
+      <tr><td class="cell-name">من</td><td>بداية العمل بصيغة تاريخ ووقت</td><td>2026-11-04T08:30</td><td><span class="fmt">YYYY-MM-DDTHH:MM</span> — حرف T بين التاريخ والوقت.</td></tr>
+      <tr><td class="cell-name">إلى</td><td>نهاية العمل بنفس الصيغة</td><td>2026-11-04T11:00</td><td>يجب أن تكون بعد البداية، ولا تتداخل مع سجل آخر لنفس الفني.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="sub">الساعات تُحسب من الفرق بين الوقتين وتُضرب في أجر الساعة المسجّل للفني لحظة الإدخال (لقطة ثابتة). لا توجد خانة لنوع الوقت في نافذة الإدخال الحالية؛ يُسجَّل السجل بنوع «عمل» تلقائيًا، ويظهر النوع في عمود الجدول.</p>
+
+  <h3>المصروفات والتوقف</h3>
+  <ul>
+    <li><b>إضافة مصروف:</b> المبلغ، النوع (قائمة إنجليزية: <code>External Repair</code> / <code>Transport</code> / <code>Other</code>)، ملاحظات. المبلغ لا يقبل سالبًا.</li>
+    <li><b>بدء توقف:</b> يسجّل توقفًا غير مخطط يبدأ الآن لهذا الأصل. لا يمكن وجود فترتين مفتوحتين لنفس الأصل.</li>
+    <li><b>إنهاء التوقف:</b> يغلق الفترة المفتوحة.</li>
+  </ul>
+
+  <h3>التكلفة</h3>
+  <p>تظهر بجانب عنوان الأمر وتُحسب كالتالي:</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>المكوّن</th><th>من أين يأتي</th><th>ملاحظة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">العمالة</td><td>ساعات العمل × أجر ساعة الفني</td><td>الأجر لقطة وقت الإدخال.</td></tr>
+      <tr><td class="cell-name">قطع الغيار</td><td>الكميات المصروفة لهذا الأمر</td><td>بقيمة الحركة وقت الصرف.</td></tr>
+      <tr><td class="cell-name">المصروفات الخارجية</td><td>الإصلاح الخارجي والنقل وغيرها</td><td>تُضاف كما أُدخلت.</td></tr>
+      <tr><td class="cell-name">الإجمالي</td><td>مجموع الثلاثة</td><td>ما كان بعملة مختلفة لا يُجمع على الإجمالي، وتظهر حالة التكلفة بذلك.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ======================= 8 ======================= -->
+<section id="s8" data-search="الصيانة الوقائية خطة الدورية الاستحقاق العداد التنبيه المبكر التوليد التخطي">
+  <div class="sec-head">
+    <div class="sec-no">8</div>
+    <div>
+      <h2>الصيانة الوقائية</h2>
+      <p class="lead">خطط تتكرر بالتاريخ أو بالعداد، ويُولَّد عنها أوامر شغل.</p>
+    </div>
+  </div>
+
+  <h3>نموذج «خطة جديدة»</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الخانة</th><th>ماذا تكتب فيها</th><th>مثال</th><th class="c">الحالة</th><th>القاعدة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">الأصل</td><td>المعدة موضوع الخطة</td><td>P-001</td><td class="c"><span class="req">إلزامي</span></td><td>من الأصول النشطة.</td></tr>
+      <tr><td class="cell-name">الخطة *</td><td>اسم الخطة</td><td>فحص ربع سنوي للمضخة</td><td class="c"><span class="req">إلزامي</span></td><td>لا يُقبل فارغًا.</td></tr>
+      <tr><td class="cell-name">طريقة الاستحقاق</td><td>كيف تُحسب الاستحقاقات</td><td>بالوقت</td><td class="c"><span class="opt">اختياري</span></td><td>بالوقت/بالعداد/أيهما أسبق. الافتراضي «بالوقت».</td></tr>
+      <tr><td class="cell-name">الدورية</td><td>رقم صحيح 1..3650</td><td>3</td><td class="c"><span class="req">إلزامي*</span></td><td>مطلوب لخطط التاريخ فقط.</td></tr>
+      <tr><td class="cell-name">وحدة الدورية</td><td>يوم/أسبوع/شهر/سنة</td><td>شهر</td><td class="c"><span class="req">إلزامي*</span></td><td>تُستخدم مع الدورية الزمنية. الشهر يُحسب بتقويم حقيقي (31 يناير + شهر = آخر فبراير).</td></tr>
+      <tr><td class="cell-name">العداد</td><td>عداد الأصل المستخدم</td><td>HOURS (h)</td><td class="c"><span class="req">إلزامي*</span></td><td>مطلوب لخطط العداد. يُنشأ عداد الأصل تلقائيًا إن لم يوجد.</td></tr>
+      <tr><td class="cell-name">كل (وحدة العداد)</td><td>فرق القراءة بين استحقاقين</td><td>500</td><td class="c"><span class="req">إلزامي*</span></td><td>رقم أكبر من صفر.</td></tr>
+      <tr><td class="cell-name">تنبيه مبكر (أيام)</td><td>عدد أيام التحذير قبل الاستحقاق</td><td>7</td><td class="c"><span class="opt">اختياري</span></td><td>من 0 إلى 365. الافتراضي 7.</td></tr>
+      <tr><td class="cell-name">المهام</td><td>سطر لكل مهمة</td><td>فحص بصري<br>تزييت</td><td class="c"><span class="opt">اختياري</span></td><td>كل سطر يصبح مهمة إلزامية في أمر الشغل المولّد.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="sub">
+    * تعتمد على طريقة الاستحقاق: خطط «بالوقت» تحتاج الدورية ووحدتها، وخطط «بالعداد» تحتاج العداد ودوريته،
+    و«أيهما أسبق» تحتاج الاثنين. تاريخ البداية ليس في النموذج ويُعتمد تاريخ اليوم.
+  </p>
+
+  <h3>حالات الخطة ومعانيها</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الحالة</th><th>المعنى</th><th>ماذا تفعل</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">غير مستحق</td><td>الموعد بعيد</td><td>لا شيء</td></tr>
+      <tr><td class="cell-name">قريب</td><td>داخل أيام التنبيه</td><td>جهّز الفنيين والقطع</td></tr>
+      <tr><td class="cell-name">مستحق</td><td>حان الموعد اليوم</td><td>ولّد أمر شغل</td></tr>
+      <tr><td class="cell-name">متأخر</td><td>تجاوز الموعد</td><td>ولّد أمرًا أو خطّط الاستحقاق</td></tr>
+      <tr><td class="cell-name">موقوف</td><td>الخطة متوقفة يدويًا أو مؤرشفة</td><td>«تفعيل الخطة» للعودة</td></tr>
+      <tr><td class="cell-name">لا قراءة عداد</td><td>خطة بالعداد بلا قراءة صالحة</td><td>سجّل قراءة عداد للأصل</td></tr>
+      <tr><td class="cell-name">بانتظار الإنهاء</td><td>يوجد أمر شغل مفتوح لهذا الاستحقاق</td><td>أنهِ الأمر ثم يتقدّم الاستحقاق</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>الأزرار</h3>
+  <ul>
+    <li><b>توليد أمر شغل:</b> يدويًا من الاستحقاق الحالي. الأمر يُنشأ «مسودة» بنوع وقائي.</li>
+    <li><b>تخطي الاستحقاق:</b> يتطلب سببًا مكتوبًا، ويُسجَّل الاستحقاق «متخطى».</li>
+    <li><b>إيقاف الخطة / تفعيل الخطة:</b> تبديل بين موقوفة ونشطة.</li>
+  </ul>
+  <p>
+    التوليد التلقائي (مرة يوميًا) يُفعَّل من الإعدادات، وينشئ أوامر <b>مسودة</b> لتراجعها قبل الاعتماد.
+    وإذا فاتت عدة مواعيد والبرنامج مغلق، تُسجَّل المواعيد الأقدم «متخطاة» ويبقى آخر موعد مستحقًا،
+    فلا تُنشأ عشرات الأوامر دفعة واحدة.
+  </p>
+  <p class="sub">أكواد الخطط تلقائية بالشكل <code>PM-000001</code> (بدون سنة).</p>
+</section>
+
+<!-- ======================= 9 ======================= -->
+<section id="s9" data-search="تقويم الصيانة الشهر الأيام الاستحقاقات">
+  <div class="sec-head">
+    <div class="sec-no">9</div>
+    <div>
+      <h2>تقويم الصيانة</h2>
+      <p class="lead">شبكة شهرية تعرض أكواد الخطط على أيام استحقاقها.</p>
+    </div>
+  </div>
+  <ul>
+    <li>الأسبوع يبدأ بالأحد وينتهي بالسبت.</li>
+    <li>كل خلية يوم تعرض رقم اليوم، وتحته حتى <b>3</b> أكواد خطط مستحقة في ذلك اليوم.</li>
+    <li>عند وجود أكثر من 3، يظهر العدد الكامل في تلميح الخلية.</li>
+    <li>الأسهم ◀ و▶ تنقل بين الشهور.</li>
+  </ul>
+  <p class="sub">التقويم يعتمد على الاستحقاق الزمني فقط؛ خطط العداد لا تظهر فيه إلا إذا كان لها تاريخ استحقاق.</p>
+</section>
+
+<!-- ======================= 10 ======================= -->
+<section id="s10" data-search="قوائم الفحص القالب البنود التعبئة نتيجة فشل">
+  <div class="sec-head">
+    <div class="sec-no">10</div>
+    <div>
+      <h2>قوائم الفحص</h2>
+      <p class="lead">قالب بنود يُعبّأ عند الفحص، ونتائجه تُسجَّل على الأصل/أمر الشغل.</p>
+    </div>
+  </div>
+
+  <h3>قالب جديد</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الخانة</th><th>ماذا تكتب فيها</th><th>مثال</th><th class="c">الحالة</th><th>القاعدة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">الكود</td><td>كود قصير للقالب</td><td>TPL-PUMP-Q</td><td class="c"><span class="req">إلزامي</span></td><td>فريد. لا يُولَّد تلقائيًا من هذه الشاشة.</td></tr>
+      <tr><td class="cell-name">القالب</td><td>عنوان القالب</td><td>فحص مضخة ربع سنوي</td><td class="c"><span class="req">إلزامي</span></td><td>لا يُقبل فارغًا.</td></tr>
+      <tr><td class="cell-name">البنود</td><td>سطر لكل بند</td><td>فحص التسريب<br>حالة الزيت<br>اهتزاز</td><td class="c"><span class="req">إلزامي</span></td><td>بند واحد على الأقل. كل بند إلزامي ونوع إجابته «نجح/فشل».</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>تعبئة الفحص</h3>
+  <p>من الشاشة: «بدء فحص» تختار الأصل ثم القالب. ومن أمر الشغل: «بدء فحص» يربط الفحص بالأمر تلقائيًا.</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>نوع الإجابة</th><th>الخيارات التي تختار منها</th><th>ملاحظة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">نجح / فشل</td><td>✓ أو ✗ أو فراغ</td><td>البنود التي تُعلَّم ✗ تُعدّ «بنودًا فاشلة».</td></tr>
+      <tr><td class="cell-name">نعم / لا</td><td>نعم أو لا أو فراغ</td><td>لبنود ثنائية عامة.</td></tr>
+      <tr><td class="cell-name">تم / لا ينطبق</td><td>تم أو لا ينطبق أو فراغ</td><td>لبنود التنفيذ.</td></tr>
+      <tr><td class="cell-name">نص</td><td>قراءة أو ملاحظة حرة</td><td>مثل قيمة قياس.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="call warn">
+    <b>الإلزامي لا يُترك فارغًا</b>
+    البنود المعلّمة بـ* في نافذة التعبئة يجب الإجابة عليها. إن تركتها ظهرت رسالة
+    «هناك بنود إلزامية بلا إجابة.» ولم يُحفظ الفحص.
+  </div>
+  <p class="sub">أرقام الفحوص تلقائية بالشكل <code>INS-2026-000001</code>، وحالة الفحص: مسودة/قيد التنفيذ/مكتمل/ملغى.</p>
+</section>
+
+<!-- ======================= 11 ======================= -->
+<section id="s11" data-search="قطع الغيار المخزون الاستلام الصرف التسوية الجرد حد إعادة الطلب متوسط التكلفة">
+  <div class="sec-head">
+    <div class="sec-no">11</div>
+    <div>
+      <h2>قطع الغيار والمخزون</h2>
+      <p class="lead">رصيد يُدار بحركات موثّقة، لا بتعديل رقم مباشر.</p>
+    </div>
+  </div>
+
+  <h3>قطعة جديدة</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الخانة</th><th>ماذا تكتب فيها</th><th>مثال</th><th class="c">الحالة</th><th>القاعدة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">كود القطعة *</td><td>كود التخزين</td><td>SP-1001</td><td class="c"><span class="req">إلزامي</span></td><td>فريد، ويُقارَن دون حساسية لحالة الحروف.</td></tr>
+      <tr><td class="cell-name">اسم القطعة *</td><td>الوصف بالعربية</td><td>سيل ميكانيكي 45 مم</td><td class="c"><span class="req">إلزامي</span></td><td>لا يُقبل فارغًا.</td></tr>
+      <tr><td class="cell-name">الوحدة</td><td>وحدة القياس</td><td>قطعة</td><td class="c"><span class="req">إلزامي</span></td><td>من وحدات البيانات الأساسية.</td></tr>
+      <tr><td class="cell-name">خانات عشرية</td><td>عدد الخانات العشرية للكمية</td><td>0</td><td class="c"><span class="opt">اختياري</span></td><td>0..6؛ الصفر يعني كميات صحيحة فقط.</td></tr>
+      <tr><td class="cell-name">حد إعادة الطلب</td><td>الحد الذي يُنبّه عنده</td><td>5</td><td class="c"><span class="opt">اختياري</span></td><td>رقم غير سالب. يُقارَن بالمتاح (الرصيد − المحجوز).</td></tr>
+      <tr><td class="cell-name">الحد الأدنى</td><td>حد أدنى للرصيد</td><td>3</td><td class="c"><span class="opt">اختياري</span></td><td>رقم غير سالب. يُنبّه إذا نزل الرصيد تحته.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>الحركات — ماذا تكتب في كل نافذة</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>النافذة</th><th>الخانة</th><th>ماذا تكتب</th><th>القاعدة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name" rowspan="4">استلام</td><td>الكمية</td><td>الكمية الواردة</td><td>أكبر من صفر. الافتراضي 1.</td></tr>
+      <tr><td>تكلفة الوحدة</td><td>سعر الوحدة بعملة المحطة</td><td>لا تقبل سالبًا. تدخل في متوسط التكلفة المرجّح.</td></tr>
+      <tr><td>المورد</td><td>من القائمة أو «—»</td><td>اختياري.</td></tr>
+      <tr><td>أمر الشراء</td><td>مرجع نصي</td><td>اختياري، مثل PR-2026-000004.</td></tr>
+      <tr><td class="cell-name" rowspan="2">صرف لأمر شغل</td><td>الكمية</td><td>الكمية المصروفة</td><td>لا تتجاوز المتاح. لا تُصرف إلا لأمر مفتوح/مُسند/قيد التنفيذ/معلّق.</td></tr>
+      <tr><td>أمر الشغل</td><td>اختر الأمر</td><td>القائمة تعرض الأوامر القابلة للصرف فقط.</td></tr>
+      <tr><td class="cell-name" rowspan="2">تسوية</td><td>الكمية</td><td>الفرق بإشارة: <code>5</code> زيادة أو <code>-3</code> نقص</td><td>لا تساوي صفرًا. النقص لا يمسّ الكمية المحجوزة.</td></tr>
+      <tr><td>السبب</td><td>سبب التعديل</td><td>إلزامي — لا يُقبل فارغًا.</td></tr>
+      <tr><td class="cell-name" rowspan="3">جرد سريع</td><td>الكود</td><td>قراءة فقط</td><td>—</td></tr>
+      <tr><td>الرصيد</td><td>قراءة فقط</td><td>الرصيد الحالي في النظام.</td></tr>
+      <tr><td>الكمية الفعلية</td><td>العدد الذي عدّدته فعليًا</td><td>مسبوق بالرصيد؛ عدّل فقط الأصناف المختلفة. الفرق يُرحَّل كتسوية بسبب «جرد فعلي».</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>الأعمدة والحركات</h3>
+  <ul>
+    <li>الجدول: الكود، الاسم، الرصيد، المحجوز، المتاح، متوسط التكلفة، الوحدة. علامة ⚠ بجوار المتاح تعني «تحت الحد».</li>
+    <li>«الناقص فقط» يعرض ما وصل للحد أو تحته.</li>
+    <li>الحركات أسفل الشاشة: رقم الحركة <code>STK-2026-000001</code>، التاريخ، النوع، الكمية، القيمة.</li>
+    <li>أنواع الحركات: رصيد افتتاحي، استلام، صرف لأمر شغل، صرف آخر، مرتجع من أمر، تسوية بالزيادة/النقص، تحويل صادر/وارد، إهلاك.</li>
+  </ul>
+  <div class="call warn">
+    <b>لا تكتب رصيدًا ابتدائيًا كتسوية عشوائية</b>
+    استخدم «استلام» للبضاعة الواردة، و«تسوية» فقط لتصحيح فرق مع سبب.
+    إن كان لديك رصيد افتتاحي، فسجّله مرة واحدة عند بدء التشغيل ولا تكرره مع كل جرد.
+  </div>
+</section>
+
+<!-- ======================= 12 ======================= -->
+<section id="s12" data-search="الموردون طلبات الشراء الاعتماد الاستلام المخزن">
+  <div class="sec-head">
+    <div class="sec-no">12</div>
+    <div>
+      <h2>الموردون وطلبات الشراء</h2>
+      <p class="lead">طلب شراء يُعتمد ثم يُستلم فيدخل المخزن دفعة واحدة.</p>
+    </div>
+  </div>
+
+  <h3>مورد جديد</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الخانة</th><th>ماذا تكتب فيها</th><th>مثال</th><th class="c">الحالة</th><th>القاعدة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">الكود *</td><td>كود المورد</td><td>SUP-07</td><td class="c"><span class="req">إلزامي</span></td><td>فريد.</td></tr>
+      <tr><td class="cell-name">الاسم *</td><td>اسم المورد</td><td>شركة الروافع للتوريدات</td><td class="c"><span class="req">إلزامي</span></td><td>لا يُقبل فارغًا.</td></tr>
+      <tr><td class="cell-name">بيانات التواصل</td><td>هاتف/بريد/عنوان</td><td>0100… — sales@example.com</td><td class="c"><span class="opt">اختياري</span></td><td>نص حر.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>طلب جديد</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الخانة</th><th>ماذا تكتب فيها</th><th>مثال</th><th class="c">الحالة</th><th>القاعدة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">المورد</td><td>من القائمة أو «—»</td><td>شركة الروافع</td><td class="c"><span class="opt">اختياري</span></td><td>يمكن الاستلام بدون مورد.</td></tr>
+      <tr><td class="cell-name">القطعة</td><td>اختر الصنف</td><td>SP-1001</td><td class="c"><span class="req">إلزامي</span></td><td>لا بد من وجود أصناف.</td></tr>
+      <tr><td class="cell-name">الكمية</td><td>الكمية المطلوبة</td><td>10</td><td class="c"><span class="req">إلزامي</span></td><td>أكبر من صفر. الافتراضي 1.</td></tr>
+      <tr><td class="cell-name">تكلفة الوحدة</td><td>السعر المتوقع</td><td>350.00</td><td class="c"><span class="opt">اختياري</span></td><td>لا تقبل سالبًا.</td></tr>
+      <tr><td class="cell-name">ملاحظات</td><td>أي تفاصيل</td><td>توريد عاجل</td><td class="c"><span class="opt">اختياري</span></td><td>نص حر.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="sub">
+    الشاشة الحالية تُنشئ طلبًا بسطر واحد. رقم الطلب تلقائي <code>PR-2026-000001</code>، والقيمة تُحسب من الكمية × التكلفة.
+  </p>
+
+  <h3>الحالات والأزرار</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الزر</th><th>من حالة</th><th>إلى</th><th>ما يحدث</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">اعتماد</td><td>مسودة</td><td>معتمد</td><td>يسمح بالاستلام لاحقًا.</td></tr>
+      <tr><td class="cell-name">استلام</td><td>معتمد</td><td>مستلم</td><td>كل البنود تدخل المخزن <b>في عملية واحدة</b>؛ لو فشل بند لا يدخل أي شيء.</td></tr>
+      <tr><td class="cell-name">إلغاء</td><td>مسودة أو معتمد</td><td>ملغى</td><td>يتطلب سببًا. لا استلام بعد الإلغاء.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="call stop">
+    <b>لا استلام مرتين</b>
+    بعد الاستلام تصبح الحالة «مستلم» ويُرفض الاستلام ثانيًا. تحقّق من الكميات قبل الضغط.
+  </div>
+</section>
+
+<!-- ======================= 13 ======================= -->
+<section id="s13" data-search="الفنيون الحرفة القسم أجر الساعة تعطيل">
+  <div class="sec-head">
+    <div class="sec-no">13</div>
+    <div>
+      <h2>الفنيون</h2>
+      <p class="lead">سجل الفنيين وأجر الساعة المستخدم في حساب تكلفة العمالة.</p>
+    </div>
+  </div>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الخانة</th><th>ماذا تكتب فيها</th><th>مثال</th><th class="c">الحالة</th><th>القاعدة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">الكود *</td><td>كود داخلي للفني</td><td>T-014</td><td class="c"><span class="req">إلزامي</span></td><td>فريد.</td></tr>
+      <tr><td class="cell-name">الاسم *</td><td>اسم الفني</td><td>أحمد سمير</td><td class="c"><span class="req">إلزامي</span></td><td>لا يُقبل فارغًا.</td></tr>
+      <tr><td class="cell-name">الحرفة</td><td>التخصص</td><td>ميكانيكا</td><td class="c"><span class="opt">اختياري</span></td><td>القائمة إنجليزية كما هي: Mechanical / Electrical / Instrumentation / Vehicle / General.</td></tr>
+      <tr><td class="cell-name">القسم</td><td>القسم التابع له</td><td>الورشة الميكانيكية</td><td class="c"><span class="opt">اختياري</span></td><td>نص حر.</td></tr>
+      <tr><td class="cell-name">أجر الساعة</td><td>تكلفة ساعة العمل</td><td>75.00</td><td class="c"><span class="opt">اختياري</span></td><td>لا يقبل سالبًا. يُستخدم كلفظة ثابتة عند تسجيل الوقت.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>
+    «تعطيل / تفعيل» يوقف إسناد الفني في القوائم. الفني المعطّل لا يظهر في اختيارات الإسناد والوقت.
+    يمكن تسجيل الفني بأجر 0 ثم تحديثه لاحقًا، لكن السجلات القديمة تحتفظ بالأجر القديم.
+  </p>
+</section>
+
+<!-- ======================= 14 ======================= -->
+<section id="s14" data-search="البيانات الأساسية المواقع الفئات الأنواع أكواد الأعطال مكتبة المهام الوحدات المخازن العملات التقاويم ساعات العمل">
+  <div class="sec-head">
+    <div class="sec-no">14</div>
+    <div>
+      <h2>البيانات الأساسية</h2>
+      <p class="lead">تسعة تبويبات مرجعية. الشاشة <b>تضيف</b> فقط — لا تعديل ولا حذف من هنا.</p>
+    </div>
+  </div>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>التبويب</th><th>الخانات بالترتيب</th><th>مثال</th><th>القاعدة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">المواقع</td><td>الكود، الاسم العربي، الاسم الإنجليزي</td><td>RAW — وحدة المياه الخام</td><td>الكود فريد. الموقع الرئيسي <code>MAIN</code> موجود مسبقًا، وكل أصل يحتاج موقعًا نشطًا.</td></tr>
+      <tr><td class="cell-name">الفئات</td><td>الكود، الاسم العربي، الاسم الإنجليزي</td><td>PUMP — مضخات</td><td>الكود فريد. الفئات المزروعة تشمل PUMP وMOTOR وBLOWER وGEN وCOMP وVALVE وVEH وELEC وINST وOTHER.</td></tr>
+      <tr><td class="cell-name">أنواع الأصول</td><td>الكود، الاسم، الفئة</td><td>PUMP-CENT — مضخة طرد مركزي — PUMP</td><td>الكود فريد، والنوع يتبع فئة واحدة. عند اختيار نوع في نموذج الأصل يجب أن يطابق الفئة.</td></tr>
+      <tr><td class="cell-name">أكواد الأعطال</td><td>المجموعة، الكود، الاسم</td><td>MECH — BEARING — عطل رولمان بلي</td><td>المجموعات: MECH/ELEC/INST/OPER/EXT/OTH. الكود فريد داخل مجموعته.</td></tr>
+      <tr><td class="cell-name">مكتبة المهام</td><td>الكود، العنوان، المدة (دقيقة)</td><td>T-OILCHG — تغيير زيت — 45</td><td>الكود فريد. المدة اختيارية (عدد صحيح دقائق).</td></tr>
+      <tr><td class="cell-name">الوحدات</td><td>الكود، الاسم العربي، الاسم الإنجليزي، البُعد، الدقة</td><td>bar — بار — bar — pressure — 2</td><td>الكود حتى 16 حرفًا بلا مسافات. الاسم العربي والبُعد إلزاميان. الدقة 0..6.</td></tr>
+      <tr><td class="cell-name">المخازن</td><td>الكود، الاسم</td><td>WH-01 — المخزن الرئيسي</td><td>الكود فريد.</td></tr>
+      <tr><td class="cell-name">العملات</td><td>الكود، الاسم، الخانات العشرية</td><td>USD — US Dollar — 2</td><td>الكود 3 حروف لاتينية (ISO 4217). الخانات 0..4.</td></tr>
+      <tr><td class="cell-name">تقاويم التشغيل</td><td>الكود، الاسم العربي، الاسم الإنجليزي</td><td>CAL-2 — ورديتان</td><td>بعد الحفظ تُفتح نافذة «ساعات العمل» مباشرة.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>نافذة «ساعات العمل»</h3>
+  <p>لكل يوم من أيام الأسبوع:</p>
+  <ul>
+    <li>مربع اختيار: هل اليوم يوم عمل؟</li>
+    <li><b>من</b> و<b>إلى</b> بصيغة <span class="fmt">HH:MM</span>، مثل <code>08:00</code> و<code>16:00</code>.</li>
+    <li>إذا كان وقت النهاية <b>قبل</b> وقت البداية فالوردية ليلية تنتهي في اليوم التالي.</li>
+  </ul>
+  <p class="sub">العمود «ساعات/أسبوع» في الجدول يُحسب من الأيام المفعّلة، و«أيام العمل» هو عددها.</p>
+
+  <div class="call warn">
+    <b>لا يوجد تعديل أو حذف هنا</b>
+    الشاشة تضيف سجلات جديدة فقط. إن أخطأت في كود، فلا تعِد استخدامه بسجل آخر؛
+    راجع مسؤول النظام لتصحيحه من قاعدة البيانات.
+  </div>
+</section>
+
+<!-- ======================= 15 ======================= -->
+<section id="s15" data-search="المستخدمون الصلاحيات المدير تعديل رؤية وطباعة رؤية فقط كلمة المرور تعطيل">
+  <div class="sec-head">
+    <div class="sec-no">15</div>
+    <div>
+      <h2>المستخدمون والصلاحيات</h2>
+      <p class="lead">شاشة المدير فقط. الحسابات محلية، والصلاحية تُطبَّق داخل الخدمات لا بإخفاء الأزرار فقط.</p>
+    </div>
+  </div>
+
+  <h3>حساب جديد</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الخانة</th><th>ماذا تكتب فيها</th><th>مثال</th><th class="c">الحالة</th><th>القاعدة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">اسم المستخدم</td><td>اسم دخول فريد</td><td>tech.ali</td><td class="c"><span class="req">إلزامي</span></td><td>لا يُقبل فارغًا، ولا يتكرر.</td></tr>
+      <tr><td class="cell-name">الاسم المعروض</td><td>الاسم كما يظهر</td><td>علي حسن</td><td class="c"><span class="opt">اختياري</span></td><td>يُستخدم في شريط الحالة والسجلات.</td></tr>
+      <tr><td class="cell-name">الصلاحية</td><td>دور الحساب</td><td>تعديل</td><td class="c"><span class="req">إلزامي</span></td><td>مدير/تعديل/رؤية وطباعة/رؤية فقط.</td></tr>
+      <tr><td class="cell-name">كلمة المرور</td><td>٨ أحرف على الأقل</td><td>—</td><td class="c"><span class="req">إلزامي</span></td><td>تُحفظ مشفّرة.</td></tr>
+      <tr><td class="cell-name">تأكيد كلمة المرور</td><td>نفسها</td><td>—</td><td class="c"><span class="req">إلزامي</span></td><td>الاختلاف يمنع الإنشاء.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>ماذا تستطيع كل صلاحية؟</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الإجراء</th><th>مدير</th><th>تعديل</th><th>رؤية وطباعة</th><th>رؤية فقط</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">عرض البيانات</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td></tr>
+      <tr><td class="cell-name">إدخال وتعديل البيانات</td><td class="c">✓</td><td class="c">✓</td><td class="c">—</td><td class="c">—</td></tr>
+      <tr><td class="cell-name">تشغيل أوامر الشغل (اعتماد/إسناد/بدء/إنهاء)</td><td class="c">✓</td><td class="c">✓</td><td class="c">—</td><td class="c">—</td></tr>
+      <tr><td class="cell-name">إغلاق أمر شغل أو إعادة فتحه</td><td class="c">✓</td><td class="c">—</td><td class="c">—</td><td class="c">—</td></tr>
+      <tr><td class="cell-name">التقارير والتصدير PDF/Excel</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">—</td></tr>
+      <tr><td class="cell-name">إدارة المستخدمين</td><td class="c">✓</td><td class="c">—</td><td class="c">—</td><td class="c">—</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>الأزرار</h3>
+  <ul>
+    <li><b>مستخدم جديد:</b> النموذج أعلاه.</li>
+    <li><b>تغيير الصلاحية:</b> قائمة الأدوار للحساب المحدد.</li>
+    <li><b>إعادة تعيين كلمة المرور:</b> كلمة جديدة + تأكيد، ثم يظهر <b>كود استرداد</b> مرة واحدة.</li>
+    <li><b>تعطيل / تفعيل:</b> تعطيل الحساب يمنع الدخول ويُبقي سجلاته. لا يمكنك تعطيل حسابك، ولا تعطيل آخر مدير نشط.</li>
+    <li><b>تغيير كلمة المرور:</b> لك شخصيًا: الحالية + الجديدة + التأكيد.</li>
+  </ul>
+  <div class="call stop">
+    <b>حدود أمنية</b>
+    كلمة المرور تمنع الدخول العابر فقط، ولا تشفّر قاعدة البيانات. من يملك الملف يستطيع فتحه بأدوات أخرى؛
+    لذلك احمِ الجهاز ومجلد البيانات، واحتفظ بكود الاسترداد في مكان منفصل.
+  </div>
+</section>
+
+<!-- ======================= 16 ======================= -->
+<section id="s16" data-search="التقارير معاينة PDF Excel الفترة سجل المعدات تكلفة الصيانة أرصدة المخزون">
+  <div class="sec-head">
+    <div class="sec-no">16</div>
+    <div>
+      <h2>التقارير</h2>
+      <p class="lead">ستة تقارير، معاينة على الشاشة ثم تصدير PDF أو Excel.</p>
+    </div>
+  </div>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>الكود</th><th>التقرير</th><th>الفلاتر التي تظهر</th><th>أهم الأعمدة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">REP-001</td><td>سجل المعدات</td><td>لا فلاتر في الشاشة</td><td>الكود، الاسم، الفئة، الموقع، الخطورة، الحالة، الحالة الفنية</td></tr>
+      <tr><td class="cell-name">REP-003</td><td>جدول الصيانة الوقائية</td><td>من / إلى</td><td>كود الخطة، الأصل، العنوان، الاستحقاق التالي، الحالة، حالة الخطة</td></tr>
+      <tr><td class="cell-name">REP-005</td><td>سجل أوامر الشغل</td><td>من / إلى</td><td>الرقم، الأصل، النوع، العنوان، الحالة، الأولوية، الاستحقاق، تاريخ الإنهاء</td></tr>
+      <tr><td class="cell-name">REP-006</td><td>أمر شغل فردي</td><td>اختيار أمر الشغل</td><td>بطاقة: بيانات الأمر، المهام، القطع، التكلفة، خطوط التوقيع</td></tr>
+      <tr><td class="cell-name">REP-009</td><td>أرصدة المخزون</td><td>لا فلاتر في الشاشة</td><td>القطعة، الاسم، المخزن، الرصيد، المحجوز، المتاح، متوسط التكلفة، القيمة</td></tr>
+      <tr><td class="cell-name">REP-013</td><td>تكلفة الصيانة</td><td>من / إلى</td><td>الأصل، قطع، عمالة، خارجي، الإجمالي</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>كيف تستخدمها</h3>
+  <ol class="steps">
+    <li>اختر التقرير من القائمة.</li>
+    <li>إن ظهرت «من / إلى» اضبط الفترة. الافتراضي من أول الشهر الحالي إلى اليوم.</li>
+    <li>في «أمر شغل فردي» اختر الأمر من القائمة.</li>
+    <li>«معاينة» تُحدّث الجدول والإجماليات على الشاشة.</li>
+    <li>«تصدير PDF» أو «تصدير Excel» يفتح نافذة حفظ باسم مقترح <code>ENG_IBRAHIM_REP-xxx_التاريخ</code>.</li>
+  </ol>
+  <p class="sub">
+    فلترة الفترة في سجل أوامر الشغل وتكلفة الصيانة تعتمد على <b>تاريخ الطلب</b>؛
+    وفي جدول الصيانة الوقائية على <b>تاريخ الاستحقاق الزمني</b>.
+    التصدير يعمل في الخلفية، وتُعطَّل أزرار التصدير حتى ينتهي.
+  </p>
+  <div class="call tip">
+    <b>معلومة إجمالية</b>
+    يظهر سطر الإجماليات أعلى الجدول: عدد السجلات، أو القيمة الإجمالية للمخزون، أو مجموع بنود التكلفة.
+  </div>
+</section>
+
+<!-- ======================= 17 ======================= -->
+<section id="s17" data-search="التنبيهات سجل التتبع البحث العام Ctrl+K">
+  <div class="sec-head">
+    <div class="sec-no">17</div>
+    <div>
+      <h2>التنبيهات، سجل التتبع، والبحث العام</h2>
+      <p class="lead">ثلاث أدوات قراءة سريعة: ما يحتاج انتباهك، من غيّر ماذا، وأين تجد سجلًا.</p>
+    </div>
+  </div>
+
+  <h3>التنبيهات</h3>
+  <p>قائمة محسوبة لحظيًا من البيانات، لا تُحفظ ولا تتكرر:</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>التنبيه</th><th>الأهمية</th><th>متى يظهر</th><th>التفاصيل المعروضة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">صيانة وقائية متأخرة</td><td>حرج</td><td>خطة حالتها «متأخر»</td><td>كود الخطة · كود الأصل</td></tr>
+      <tr><td class="cell-name">صيانة وقائية قريبة</td><td>تحذير</td><td>خطة حالتها «قريب»</td><td>كود الخطة · تاريخ الاستحقاق</td></tr>
+      <tr><td class="cell-name">مخزون تحت الحد</td><td>تحذير</td><td>صنف متاحه ≤ حد إعادة الطلب أو رصيده &lt; الحد الأدنى</td><td>كود الصنف · المتاح والوحدة</td></tr>
+      <tr><td class="cell-name">أمر شغل تجاوز الاستحقاق</td><td>حرج</td><td>أمر مفتوح/مُسند/قيد التنفيذ/معلّق وتاريخ استحقاقه مضى</td><td>رقم الأمر · كود الأصل</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="sub">يظهر أعلى الجدول ملخص: «{حرج} حرج · {تحذير} تحذير».</p>
+
+  <h3>سجل التتبع</h3>
+  <ul>
+    <li>قراءة فقط: التاريخ، المستخدم، الإجراء، الكيان، السبب.</li>
+    <li>فلتر بنوع الكيان (أصل، أمر شغل، قطعة… إلخ).</li>
+    <li>يُسجَّل فيه ما يستحق التتبع: تغييرات الحالة، الأرشفة، الحركات المالية/المخزنية، الاستيراد، تغييرات المستخدمين.</li>
+  </ul>
+
+  <h3>البحث العام</h3>
+  <p>افتحه بـ<kbd>Ctrl</kbd>+<kbd>K</kbd> أو من خانة البحث أعلى الشاشة.</p>
+  <ul>
+    <li>اكتب <b>حرفين على الأقل</b>.</li>
+    <li>يبحث في: الأصول، المركبات، أوامر الشغل، قطع الغيار.</li>
+    <li>المطابقة بالكود أو الاسم أو رقم اللوحة، مع تجاهل التشكيل وفروق الحروف العربية (أ/ا، ة/ه، ى/ي) والأرقام العربية.</li>
+    <li>اضغط <kbd>Enter</kbd> لفتح النتيجة المحددة في شاشتها.</li>
+  </ul>
+</section>
+
+<!-- ======================= 18 ======================= -->
+<section id="s18" data-search="الإعدادات اللغة المظهر النسخ الاحتياطي استعادة نسخة الآن توليد وقائي تلقائي">
+  <div class="sec-head">
+    <div class="sec-no">18</div>
+    <div>
+      <h2>الإعدادات والنسخ الاحتياطي</h2>
+      <p class="lead">اللغة والمظهر، التوليد التلقائي للوقائية، النسخ والاستعادة، ومعلومات البرنامج.</p>
+    </div>
+  </div>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>العنصر</th><th>ماذا يفعل</th><th>ملاحظة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">اللغة</td><td>العربية / English</td><td>تُطبَّق فورًا وتُحفظ في تفضيلات المستخدم.</td></tr>
+      <tr><td class="cell-name">المظهر</td><td>فاتح / داكن / حسب النظام</td><td>يُطبَّق فورًا.</td></tr>
+      <tr><td class="cell-name">توليد أوامر الوقائية تلقائيًا</td><td>مرة يوميًا كمسودة</td><td>يحتاج صلاحية تعديل. لا يعتمد الأوامر بدلًا عنك.</td></tr>
+      <tr><td class="cell-name">آخر نسخة ناجحة</td><td>تاريخ ووقت آخر نسخة</td><td>«لا يوجد» يعني لم تُؤخذ نسخة بعد.</td></tr>
+      <tr><td class="cell-name">نسخ احتياطي تلقائي يوميًا</td><td>مع الاحتفاظ بآخر 10 نسخ</td><td>يمكن إيقافه من المربع.</td></tr>
+      <tr><td class="cell-name">مجلد النسخ</td><td>مكان ملفات <code>.eibak</code></td><td>زر «مجلد النسخ» يفتحه.</td></tr>
+      <tr><td class="cell-name">نسخة الآن</td><td>إنشاء نسخة فورية</td><td>تُظهر المسار بعد النجاح.</td></tr>
+      <tr><td class="cell-name">استعادة من ملف</td><td>استبدال البيانات بنسخة مختارة</td><td>يتحقق من السلامة، ويأخذ نسخة أمان أولًا، ثم أعد تشغيل البرنامج.</td></tr>
+      <tr><td class="cell-name">حول البرنامج</td><td>الإصدار، إصدار البنية، مجلد البيانات، مجلد السجلات</td><td>المسارات تُعرض LTR قابلة للتحديد. ومنه زر LinkedIn للمطوّر.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="call warn">
+    <b>لا تضع مجلد النسخ على نفس القرص فقط</b>
+    انسخ مجلد <code>backups</code> إلى فلاشة أو جهاز آخر بانتظام. النسخة على نفس القرص لا تحميك من تلف القرص.
+  </div>
+  <div class="call info">
+    <b>متى تُنبَّه؟</b>
+    إذا كانت آخر نسخة أقدم من 7 أيام يظهر تحذير برتقالي في شريط الحالة السفلي.
+  </div>
+  <div class="call stop">
+    <b>الاستعادة عملية خطيرة</b>
+    تُستبدل البيانات الحالية بالكامل. تأكد من اختيار الملف الصحيح، ولا تغلق البرنامج أثناء العملية،
+    وبعدها أغلق البرنامج وافتحه من جديد.
+  </div>
+</section>
+
+<!-- ======================= 19 ======================= -->
+<section id="s19" data-search="الاستيراد Excel CSV أعمدة asset_code part_code criticality status reorder_point">
+  <div class="sec-head">
+    <div class="sec-no">19</div>
+    <div>
+      <h2>الاستيراد من Excel / CSV</h2>
+      <p class="lead">ملف واحد، رأس أعمدة إنجليزي ثابت، ومراجعة كاملة قبل أي إضافة.</p>
+    </div>
+  </div>
+
+  <p>
+    زر «استيراد أصول» في شاشة الأصول، و«استيراد أصناف» في شاشة قطع الغيار.
+    يقرأ البرنامج الملف كله أولًا <b>في الذاكرة</b>، ويعرض عدد الصالح والأخطاء،
+    ولا يضيف أي صف إذا كان في الملف خطأ واحد.
+  </p>
+
+  <h3>ملف الأصول — الأعمدة</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>العمود (كما يُكتب في الصف الأول)</th><th>ماذا تكتب في الخلايا تحته</th><th>مثال</th><th class="c">الحالة</th><th>قاعدة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">asset_code</td><td>كود الأصل</td><td>P-101</td><td class="c"><span class="req">إلزامي</span></td><td>فريد في الملف وفي قاعدة البيانات.</td></tr>
+      <tr><td class="cell-name">asset_name_ar</td><td>الاسم العربي</td><td>مضخة تغذية الغلاية</td><td class="c"><span class="req">إلزامي</span></td><td>لا يُقبل فارغًا.</td></tr>
+      <tr><td class="cell-name">category_code</td><td>كود فئة موجود</td><td>PUMP</td><td class="c"><span class="req">إلزامي</span></td><td>يجب أن توجد الفئة في البيانات الأساسية.</td></tr>
+      <tr><td class="cell-name">location_code</td><td>كود موقع موجود</td><td>MAIN</td><td class="c"><span class="req">إلزامي</span></td><td>يجب أن يوجد الموقع.</td></tr>
+      <tr><td class="cell-name">criticality</td><td>قيمة إنجليزية</td><td>High</td><td class="c"><span class="opt">اختياري</span></td><td>Critical/High/Medium/Low. الافتراضي Medium.</td></tr>
+      <tr><td class="cell-name">status</td><td>قيمة إنجليزية</td><td>In Service</td><td class="c"><span class="opt">اختياري</span></td><td>In Service/Standby/Out of Service/Under Maintenance/Retired. الافتراضي In Service.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="sub">
+    الأصول المستوردة تُسجَّل باستراتيجية <code>PM</code> وبلا عداد (<code>None</code>) وبلا نوع أو أصل أب.
+    أي عمود إضافي يُتجاهل.
+  </p>
+
+  <h3>ملف قطع الغيار — الأعمدة</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>العمود</th><th>ماذا تكتب في الخلايا تحته</th><th>مثال</th><th class="c">الحالة</th><th>قاعدة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">part_code</td><td>كود القطعة</td><td>SP-2001</td><td class="c"><span class="req">إلزامي</span></td><td>فريد في الملف وفي قاعدة البيانات.</td></tr>
+      <tr><td class="cell-name">name_ar</td><td>اسم القطعة بالعربية</td><td>فلتر زيت محرك</td><td class="c"><span class="req">إلزامي</span></td><td>لا يُقبل فارغًا.</td></tr>
+      <tr><td class="cell-name">unit_code</td><td>كود وحدة موجود</td><td>pcs</td><td class="c"><span class="req">إلزامي</span></td><td>مثل pcs أو set أو L أو kg. يُطابَق مع الوحدات دون حساسية لحالة الحروف، ثم يُستخدم الكود المخزّن.</td></tr>
+      <tr><td class="cell-name">reorder_point</td><td>حد إعادة الطلب</td><td>5</td><td class="c"><span class="opt">اختياري</span></td><td>رقم غير سالب.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>مثال جاهز للنسخ</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>asset_code</th><th>asset_name_ar</th><th>category_code</th><th>location_code</th><th>criticality</th><th>status</th></tr></thead>
+    <tbody>
+      <tr><td>P-101</td><td>مضخة تغذية الغلاية</td><td>PUMP</td><td>MAIN</td><td>High</td><td>In Service</td></tr>
+      <tr><td>M-201</td><td>محرك سير النقل</td><td>MOTOR</td><td>MAIN</td><td>Medium</td><td>Standby</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="tw">
+  <table>
+    <thead><tr><th>part_code</th><th>name_ar</th><th>unit_code</th><th>reorder_point</th></tr></thead>
+    <tbody>
+      <tr><td>SP-2001</td><td>فلتر زيت محرك</td><td>pcs</td><td>5</td></tr>
+      <tr><td>SP-2002</td><td>زيت هيدروليك</td><td>L</td><td>20</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>قواعد الملف</h3>
+  <ul>
+    <li>الصف الأول رأس أعمدة بأسماء إنجليزية كما هي أعلاه. لا تُغيّر الأسماء ولا ترجمها.</li>
+    <li>CSV بترميز UTF-8 (يُقبل مع BOM)، أو Excel <code>.xlsx</code>؛ ويُقرأ <b>أول ورقة عمل</b> فقط.</li>
+    <li>البيانات تبدأ من الصف الثاني. الصفوف الفارغة تُتجاهل.</li>
+    <li>الحد الأقصى <b>5000 صف</b>.</li>
+    <li>يُرفض الملف إذا: كود مكرر داخل الملف، أو كود موجود مسبقًا، أو قيمة مرجعية غير موجودة، أو حقل إلزامي فارغ، أو رقم غير صالح في <code>reorder_point</code>.</li>
+    <li>عند وجود أخطاء تظهر أول 8 أخطاء مع رقم الصف واسم الحقل، ولا يُستورد أي صف.</li>
+  </ul>
+  <div class="call stop">
+    <b>الاستيراد ليس تحديثًا</b>
+    لا يعدّل سجلًا موجودًا؛ الأكواد الموجودة تُرفض. نظّف الملف من الأكواد المكررة قبل المحاولة.
+  </div>
+</section>
+
+<!-- ======================= 20 ======================= -->
+<section id="s20" data-search="القيم المسموحة Enums إنجليزي عربي Critical High Medium Low In Service Standby">
+  <div class="sec-head">
+    <div class="sec-no">20</div>
+    <div>
+      <h2>مرجع القيم المسموحة</h2>
+      <p class="lead">ما تراه بالعربية في الواجهة، وما يُكتب بالإنجليزية في ملفات الاستيراد.</p>
+    </div>
+  </div>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>المجموعة</th><th>القيم المخزّنة (تُكتب في الاستيراد)</th><th>ما يظهر في الواجهة العربية</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">درجة الخطورة / الأولوية</td><td>Critical, High, Medium, Low</td><td>حرجة، عالية، متوسطة، منخفضة</td></tr>
+      <tr><td class="cell-name">الحالة التشغيلية</td><td>In Service, Standby, Out of Service, Under Maintenance, Retired</td><td>تعمل، احتياطي، خارج الخدمة، تحت الصيانة، مشطوب</td></tr>
+      <tr><td class="cell-name">الحالة الفنية</td><td>Excellent, Good, Fair, Poor, Unassessed</td><td>ممتازة، جيدة، مقبولة، ضعيفة، غير مقيّمة</td></tr>
+      <tr><td class="cell-name">استراتيجية الصيانة</td><td>PM, CM, Both, Run-to-Failure</td><td>وقائية، تصحيحية، وقائية وتصحيحية، حتى التعطل</td></tr>
+      <tr><td class="cell-name">نوع العداد</td><td>Runtime Hours, Kilometer, Cycle, None</td><td>ساعات تشغيل، كيلومترات، دورات، بدون</td></tr>
+      <tr><td class="cell-name">نوع أمر الشغل</td><td>PM, CM, INSPECTION, OTHER</td><td>وقائية، تصحيحية، فحص، أخرى</td></tr>
+      <tr><td class="cell-name">حالة أمر الشغل</td><td>Draft, Open, Assigned, InProgress, OnHold, Completed, Closed, Cancelled</td><td>مسودة، مفتوح، مُسند، قيد التنفيذ، معلّق، منتهٍ، مغلق، ملغى</td></tr>
+      <tr><td class="cell-name">حالة البلاغ</td><td>New, Investigating, Converted, Resolved, Cancelled</td><td>جديد، قيد الفحص، تحوّل لأمر شغل، تم حله، ملغى</td></tr>
+      <tr><td class="cell-name">حالة الخطة الوقائية</td><td>NotDue, DueSoon, Due, Overdue, Paused, NoValidMeter, AwaitingCompletion</td><td>غير مستحق، قريب، مستحق، متأخر، موقوف، لا قراءة عداد، بانتظار الإنهاء</td></tr>
+      <tr><td class="cell-name">طريقة استحقاق الخطة</td><td>DATE_ONLY, METER_ONLY, FIRST_DUE</td><td>بالوقت، بالعداد، أيهما أسبق</td></tr>
+      <tr><td class="cell-name">تفاصيل دورة الاستحقاق</td><td>Scheduled, Generated, Completed, Skipped, Missed</td><td>مجدول، تم توليد أمر، منتهٍ، متخطى، فائت</td></tr>
+      <tr><td class="cell-name">نوع الوقت</td><td>Work, Travel, Waiting</td><td>عمل، انتقال، انتظار</td></tr>
+      <tr><td class="cell-name">نوع المصروف</td><td>External Repair, Transport, Other</td><td>تظهر إنجليزية كما هي في القائمة</td></tr>
+      <tr><td class="cell-name">نوع التوقف</td><td>unplanned, planned, external</td><td>غير مخطط، مخطط، خارجي</td></tr>
+      <tr><td class="cell-name">حالة طلب الشراء</td><td>Draft, Approved, Received, Cancelled</td><td>مسودة، معتمد، مستلم، ملغى</td></tr>
+      <tr><td class="cell-name">حالة الفحص</td><td>Draft, InProgress, Completed, Cancelled</td><td>مسودة، قيد التنفيذ، مكتمل، ملغى</td></tr>
+      <tr><td class="cell-name">أنواع حركة المخزون</td><td>OPENING_BALANCE, RECEIPT, ISSUE_TO_WO, ISSUE_OTHER, RETURN_FROM_WO, ADJUSTMENT_POSITIVE, ADJUSTMENT_NEGATIVE, TRANSFER_OUT, TRANSFER_IN, SCRAP</td><td>رصيد افتتاحي، استلام، صرف لأمر شغل، صرف آخر، مرتجع من أمر، تسوية بالزيادة، تسوية بالنقص، تحويل صادر، تحويل وارد، إهلاك</td></tr>
+      <tr><td class="cell-name">الحرفة</td><td>Mechanical, Electrical, Instrumentation, Vehicle, General</td><td>تظهر إنجليزية كما هي</td></tr>
+      <tr><td class="cell-name">الوقود</td><td>Diesel, Petrol, Electric, Hybrid, NaturalGas, Other</td><td>سولار، بنزين، كهرباء، هجين، غاز طبيعي، أخرى</td></tr>
+      <tr><td class="cell-name">مجموعة كود العطل</td><td>MECH, ELEC, INST, OPER, EXT, OTH</td><td>تظهر كما هي في قائمة المجموعة</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="call info">
+    <b>قاعدة ذهبية</b>
+    في الواجهة اختر من القوائم ولا تكتب القيم يدويًا. في ملفات الاستيراد اكتب القيمة الإنجليزية
+    <b>حرفيًا</b> بنفس الحروف والمسافات.
+  </div>
+</section>
+
+<!-- ======================= 21 ======================= -->
+<section id="s21" data-search="أخطاء رسائل حل مشكلة خطأ شائع مرفوض">
+  <div class="sec-head">
+    <div class="sec-no">21</div>
+    <div>
+      <h2>الأخطاء الشائعة وحلولها</h2>
+      <p class="lead">الرسالة كما تظهر، سببها، وما تفعله.</p>
+    </div>
+  </div>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>الرسالة</th><th>السبب</th><th>الحل</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">كود الأصل مطلوب.</td><td>خانة الكود فارغة أو مسافات</td><td>اكتب كودًا، مثل P-001.</td></tr>
+      <tr><td class="cell-name">اسم الأصل مطلوب.</td><td>الاسم العربي فارغ</td><td>اكتب اسمًا عربيًا واضحًا.</td></tr>
+      <tr><td class="cell-name">كود الأصل مستخدم بالفعل.</td><td>الكود موجود (بدون حساسية للحروف)</td><td>اختر كودًا جديدًا؛ لا تُعد استخدام أكواد مؤرشفة.</td></tr>
+      <tr><td class="cell-name">اختر فئة صحيحة. / اختر موقعًا نشطًا.</td><td>الفئة أو الموقع غير موجود/غير نشط</td><td>أضف الفئة أو الموقع من البيانات الأساسية ثم أعد المحاولة.</td></tr>
+      <tr><td class="cell-name">نوع الأصل لا يتبع الفئة المختارة.</td><td>النوع من فئة أخرى</td><td>غيّر الفئة أو أعد اختيار النوع من القائمة المفلترة.</td></tr>
+      <tr><td class="cell-name">سلسلة الأصل الأب تُنشئ دورة.</td><td>ربط الأصل بنفسه أو بأحد أبنائه</td><td>اختر أبًا آخر أو اترك الخانة «—».</td></tr>
+      <tr><td class="cell-name">التكلفة لا تقبل قيمة سالبة.</td><td>مبلغ سالب</td><td>اكتب صفرًا أو قيمة موجبة.</td></tr>
+      <tr><td class="cell-name">قراءة العداد أقل من آخر قراءة؛ استخدم تصحيحًا مبررًا.</td><td>قراءة تنازلية</td><td>تأكد من القيمة. لا تُدخل قراءة أقل؛ التصحيح المبرر غير متاح من الواجهة الحالية.</td></tr>
+      <tr><td class="cell-name">كود العداد مستخدم لهذا الأصل.</td><td>تكرار كود عداد داخل الأصل</td><td>استخدم كودًا مختلفًا.</td></tr>
+      <tr><td class="cell-name">وصف العَرَض مطلوب.</td><td>بلاغ بلا وصف</td><td>اكتب ما لاحظته فعليًا.</td></tr>
+      <tr><td class="cell-name">البلاغ محوّل بالفعل إلى أمر شغل.</td><td>محاولة تحويل ثانية</td><td>افتح أمر الشغل الموجود بدلًا من التحويل.</td></tr>
+      <tr><td class="cell-name">عنوان أمر الشغل مطلوب.</td><td>العنوان فارغ</td><td>اكتب عنوانًا موجزًا للعمل.</td></tr>
+      <tr><td class="cell-name">حقول مطلوبة ناقصة: …</td><td>انتقال حالة لا تكتمل شروطه</td><td>أكمل الحقول المذكورة (مثل سبب الإيقاف أو الإسناد).</td></tr>
+      <tr><td class="cell-name">هناك مهام إلزامية غير مجابة.</td><td>إنهاء أمر بمهام إلزامية مفتوحة</td><td>علّم كل المهام الإلزامية كمُنجزة، أو أضف الإجابة المطلوبة.</td></tr>
+      <tr><td class="cell-name">حدد هل عاد الأصل للخدمة.</td><td>لم تُجب سؤال الإنهاء</td><td>اضغط «إنهاء» وأجب نعم/لا.</td></tr>
+      <tr><td class="cell-name">أمر الشغل مغلق أو ملغى — للقراءة فقط.</td><td>محاولة تعديل بعد الإغلاق/الإلغاء</td><td>أعد الفتح (مدير) أو أنشئ أمرًا جديدًا.</td></tr>
+      <tr><td class="cell-name">وقت النهاية يجب أن يكون بعد البداية.</td><td>سجل وقت معكوس</td><td>راجع صيغة <span class="fmt">YYYY-MM-DDTHH:MM</span> والترتيب.</td></tr>
+      <tr><td class="cell-name">سجل وقت متداخل لنفس الفني.</td><td>فترتان متقاطعتان لنفس الفني</td><td>عدّل الأوقات أو اختر فنيًا آخر.</td></tr>
+      <tr><td class="cell-name">السبب مطلوب.</td><td>إلغاء/إيقاف/إعادة فتح/تسوية/تخطٍ بلا سبب</td><td>اكتب سببًا واضحًا؛ لا يُقبل فارغًا.</td></tr>
+      <tr><td class="cell-name">الكمية غير صالحة.</td><td>صفر أو سالب أو نص</td><td>اكتب رقمًا أكبر من صفر (أو فرقًا غير صفري في التسوية).</td></tr>
+      <tr><td class="cell-name">الرصيد المتاح لا يكفي.</td><td>صرف أكبر من المتاح</td><td>قلّل الكمية أو استلم أولًا.</td></tr>
+      <tr><td class="cell-name">عملة الحركة تخالف عملة رصيد المخزن.</td><td>حركة بعملة غير عملة الرصيد</td><td>استخدم عملة المحطة نفسها.</td></tr>
+      <tr><td class="cell-name">الطلب يحتاج بندًا واحدًا على الأقل.</td><td>طلب بلا بنود</td><td>أضف بندًا واحدًا على الأقل.</td></tr>
+      <tr><td class="cell-name">لا يمكن الاستلام قبل الاعتماد.</td><td>ضغط «استلام» على مسودة</td><td>اعتمد الطلب أولًا.</td></tr>
+      <tr><td class="cell-name">كود الوحدة: حتى 16 حرفًا بدون مسافات.</td><td>كود وحدة طويل أو فيه مسافة</td><td>مثل <code>kPa</code> أو <code>m3h</code>.</td></tr>
+      <tr><td class="cell-name">كود العملة 3 حروف لاتينية (ISO 4217) مثل USD.</td><td>كود عملة غير صحيح</td><td>ثلاثة حروف لاتينية فقط.</td></tr>
+      <tr><td class="cell-name">يجب ألا تقل كلمة المرور عن 8 أحرف.</td><td>كلمة قصيرة</td><td>استخدم 8 أحرف أو أكثر.</td></tr>
+      <tr><td class="cell-name">كلمتا المرور غير متطابقتين.</td><td>خطأ في التأكيد</td><td>أعد كتابة الكلمتين.</td></tr>
+      <tr><td class="cell-name">اسم المستخدم موجود بالفعل.</td><td>تكرار اسم الدخول</td><td>اختر اسمًا آخر.</td></tr>
+      <tr><td class="cell-name">لا يمكن ترك النظام بلا مدير نشط. / لا يمكنك تعطيل حسابك الحالي.</td><td>محاولة تعطيل آخر مدير أو نفسك</td><td>أنشئ/فعّل مديرًا آخر أولًا.</td></tr>
+      <tr><td class="cell-name">لا تملك صلاحية لهذا الإجراء.</td><td>دورك لا يسمح</td><td>اطلب من المدير ترقية دورك أو نفّذ الإجراء بحسابه.</td></tr>
+      <tr><td class="cell-name">الملف يحتوي أخطاء — لم يتم استيراد أي سجل.</td><td>خطأ واحد على الأقل في الملف</td><td>راجع أرقام الصفوف والأخطاء الثمانية الأولى، وصحّح الملف كاملًا.</td></tr>
+      <tr><td class="cell-name">موجود بالفعل في قاعدة البيانات. / مكرر داخل الملف.</td><td>كود متكرر</td><td>احذف الصفوف المكررة أو غيّر الأكواد.</td></tr>
+      <tr><td class="cell-name">قيمة مرجعية غير موجودة.</td><td>فئة/موقع/وحدة غير معرفة</td><td>أضفها في البيانات الأساسية ثم أعد الاستيراد.</td></tr>
+      <tr><td class="cell-name">عدد الصفوف يتجاوز الحد (5000).</td><td>ملف كبير</td><td>قسّمه إلى ملفات أصغر.</td></tr>
+      <tr><td class="cell-name">الملف ليس نسخة احتياطية صالحة. / النسخة الاحتياطية تالفة.</td><td>ملف تالف أو ليس <code>.eibak</code></td><td>اختر نسخة أخرى، أو تحقق من نقل الملف.</td></tr>
+      <tr><td class="cell-name">هذه النسخة الاحتياطية من إصدار أحدث من البرنامج؛ حدّث البرنامج أولًا.</td><td>نسخة من إصدار أحدث</td><td>حدّث البرنامج ثم أعد الاستعادة.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ======================= 22 ======================= -->
+<section id="s22" data-search="اختصارات لوحة المفاتيح Ctrl K F N S P E L F1 F5">
+  <div class="sec-head">
+    <div class="sec-no">22</div>
+    <div>
+      <h2>اختصارات لوحة المفاتيح</h2>
+      <p class="lead">تعمل داخل الشاشة الرئيسية، وبعضها داخل النوافذ.</p>
+    </div>
+  </div>
+  <div class="tw">
+  <table>
+    <thead><tr><th>الاختصار</th><th>الوظيفة</th><th>ملاحظة</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name"><kbd>Ctrl</kbd>+<kbd>K</kbd></td><td>البحث العام</td><td>أصول/مركبات/أوامر/قطع</td></tr>
+      <tr><td class="cell-name"><kbd>Ctrl</kbd>+<kbd>F</kbd></td><td>البحث في الشاشة الحالية</td><td>يضع المؤشر في خانة البحث</td></tr>
+      <tr><td class="cell-name"><kbd>Ctrl</kbd>+<kbd>N</kbd></td><td>سجل جديد</td><td>حسب الشاشة (أصل، أمر شغل…)</td></tr>
+      <tr><td class="cell-name"><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>حفظ النموذج المفتوح</td><td>يضغط «حفظ» مع كل التحقق</td></tr>
+      <tr><td class="cell-name"><kbd>F5</kbd></td><td>تحديث البيانات</td><td>يعيد تحميل الشاشة الحالية</td></tr>
+      <tr><td class="cell-name"><kbd>Ctrl</kbd>+<kbd>P</kbd></td><td>تصدير PDF</td><td>من شاشة التقارير</td></tr>
+      <tr><td class="cell-name"><kbd>Ctrl</kbd>+<kbd>E</kbd></td><td>تصدير Excel</td><td>من شاشة التقارير</td></tr>
+      <tr><td class="cell-name"><kbd>Ctrl</kbd>+<kbd>L</kbd></td><td>تبديل العربية/الإنجليزية</td><td>فوري</td></tr>
+      <tr><td class="cell-name"><kbd>F1</kbd></td><td>دليل الاستخدام</td><td>يفتح الدليل المدمج</td></tr>
+      <tr><td class="cell-name"><kbd>Esc</kbd></td><td>إغلاق النافذة/إلغاء</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ======================= 23 ======================= -->
+<section id="s23" data-search="قواعد ممنوعات أخطاء تجنب أرشفة تكرار كود">
+  <div class="sec-head">
+    <div class="sec-no">23</div>
+    <div>
+      <h2>قواعد ذهبية وممنوعات</h2>
+      <p class="lead">عشر قواعد تمنع معظم المشكلات التي تُفسد السجل.</p>
+    </div>
+  </div>
+
+  <ol class="steps">
+    <li><b>ابدأ بالمرجعيات:</b> موقع، فئة، نوع، وحدة، مخزن — قبل أي أصل أو قطعة.</li>
+    <li><b>الكود ثابت:</b> لا تُغيّر كود أصل بعد طباعة ملصق QR أو بعد ربط أوامر به.</li>
+    <li><b>لا تُعد استخدام كود:</b> حتى لو أُرشف السجل، الكود يبقى محجوزًا.</li>
+    <li><b>الأرشفة بدل الحذف:</b> الأصل المؤرشف يبقى بتاريخه وتقاريره.</li>
+    <li><b>لا تُعدّل أمرًا مغلقًا:</b> أعد فتحه بسبب موثّق، أو أنشئ أمرًا جديدًا.</li>
+    <li><b>العداد لا ينقص:</b> القراءة الأقل تُرفض. سجّل التصحيح بملاحظة واضحة ولا تُدخل قراءة قديمة بتاريخ جديد.</li>
+    <li><b>لا تصرف قطعة لأمر مغلق:</b> القائمة لا تعرض إلا الأوامر القابلة للصرف.</li>
+    <li><b>لا تستلم طلب شراء مرتين:</b> الاستلام دفعة واحدة ومن يعيد الضغط يجد الحالة «مستلم».</li>
+    <li><b>الاستيراد ليس تحديثًا:</b> الملف يضيف فقط، وأي خطأ يرفض الملف كله.</li>
+    <li><b>خُذ نسخة قبل أي عملية كبيرة:</b> استعادة، تنظيف بيانات، أو إدخال دفعة كبيرة.</li>
+  </ol>
+
+  <div class="grid2">
+    <div class="tile"><h4>ممنوع في الخانات</h4><p>
+      فاصلة الآلاف، رموز العملة داخل المبلغ، أسماء الشهور، صيغة تاريخ <code>04/11/2026</code>،
+      أو كتابة «لا يوجد» في خانة رقمية. اتركها فارغة.
+    </p></div>
+    <div class="tile"><h4>ممنوع في الأكواد</h4><p>
+      مسافات داخل الكود، رموز غريبة، أو كود يختلف بحرف واحد فقط عن كود آخر.
+      الكود القصير الثابت أسهل في البحث والطباعة.
+    </p></div>
+    <div class="tile"><h4>ممنوع في المهام</h4><p>
+      مهمة بلا عنوان، أو ترك مهمة إلزامية مفتوحة ثم محاولة الإنهاء. الإنهاء يتحقق من كل الإلزاميات.
+    </p></div>
+    <div class="tile"><h4>ممنوع في الوقائية</h4><p>
+      خطة بلا دورية ولا عداد، أو دورية صفرية. استخدم «تخطي الاستحقاق» بسبب بدل تغيير التواريخ عشوائيًا.
+    </p></div>
+  </div>
+</section>
+
+<!-- ======================= 24 ======================= -->
+<section id="s24" data-search="ورقة مرجعية سريعة ملخص الشاشات أهم الخانات">
+  <div class="sec-head">
+    <div class="sec-no">24</div>
+    <div>
+      <h2>ورقة مرجعية سريعة</h2>
+      <p class="lead">اطبعها وعلّقها قرب الجهاز: الشاشة، أهم الخانات، والقاعدة في سطر.</p>
+    </div>
+  </div>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>الشاشة</th><th>أهم الخانات</th><th>القاعدة في سطر</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">أصل جديد</td><td>كود الأصل، الاسم العربي، الفئة، الموقع</td><td>الكود فريد، والفئة والموقع موجودان مسبقًا.</td></tr>
+      <tr><td class="cell-name">قراءة عداد</td><td>القراءة، التاريخ</td><td>لا تقل عن آخر قراءة، والتاريخ بترتيبه.</td></tr>
+      <tr><td class="cell-name">بلاغ عطل</td><td>العَرَض، وقت الملاحظة، الأولوية</td><td>اكتب العَرَض لا التشخيص، ثم حوّله لأمر.</td></tr>
+      <tr><td class="cell-name">أمر شغل</td><td>العنوان، الأصل، النوع، الاستحقاق</td><td>يبدأ مسودة، والإغلاق للمدير فقط.</td></tr>
+      <tr><td class="cell-name">ساعات العمل</td><td>الفني، من، إلى</td><td>صيغة <span class="fmt">YYYY-MM-DDTHH:MM</span> والنهاية بعد البداية.</td></tr>
+      <tr><td class="cell-name">خطة وقائية</td><td>الخطة، طريقة الاستحقاق، الدورية/العداد</td><td>تاريخ البداية اليوم، والأوامر المولّدة مسودة.</td></tr>
+      <tr><td class="cell-name">قالب فحص</td><td>الكود، العنوان، البنود</td><td>سطر لكل بند، وكل بند إلزامي.</td></tr>
+      <tr><td class="cell-name">قطعة جديدة</td><td>الكود، الاسم، الوحدة، خانات عشرية</td><td>الرصيد يُبنى بحركات لا بكتابة رقم.</td></tr>
+      <tr><td class="cell-name">استلام قطع</td><td>الكمية، تكلفة الوحدة، المورد</td><td>الكمية &gt; 0، والتكلفة لا تقل عن صفر.</td></tr>
+      <tr><td class="cell-name">صرف لأمر</td><td>الكمية، أمر الشغل</td><td>لا يتجاوز المتاح، ولا يُصرف لأمر مغلق.</td></tr>
+      <tr><td class="cell-name">تسوية</td><td>الفرق، السبب</td><td>الفرق غير صفري، والسبب إلزامي.</td></tr>
+      <tr><td class="cell-name">طلب شراء</td><td>القطعة، الكمية، التكلفة</td><td>اعتمد ثم استلم؛ الاستلام مرة واحدة.</td></tr>
+      <tr><td class="cell-name">مستخدم جديد</td><td>اسم المستخدم، الصلاحية، كلمة المرور</td><td>٨ أحرف، والمدير يبقى واحدًا على الأقل.</td></tr>
+      <tr><td class="cell-name">تقرير</td><td>التقرير، من/إلى أو الأمر</td><td>الافتراضي من أول الشهر إلى اليوم.</td></tr>
+      <tr><td class="cell-name">استيراد</td><td>رأس الأعمدة، الأكواد، القيم الإنجليزية</td><td>خطأ واحد يرفض الملف كله.</td></tr>
+      <tr><td class="cell-name">نسخة احتياطية</td><td>—</td><td>يومية تلقائية، واحتفظ بنسخة خارج الجهاز.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="call tip">
+    <b>ترتيب العمل اليومي المقترح</b>
+    افتح لوحة المعلومات ← عالج التنبيهات الحمراء ← راجع أوامر الشغل المفتوحة ← سجّل قراءات العدادات ←
+    أغلق أوامر اليوم ← تأكد من نسخة احتياطية حديثة.
+  </div>
+
+  <footer>
+    ENG. IBRAHIM — نظام إدارة الصيانة · دليل الاستخدام التفصيلي · الإصدار 0.10.0<br>
+    هذا الملف توثيقي فقط ولا يعدّل أي كود أو بيانات. جميع أسماء الشاشات والخانات مطابقة للنسخة الحالية.
+  </footer>
+</section>
+
+</main>
+</div>
+
+<script>
+(function () {
+  var q = document.getElementById('q');
+  if (!q) return;
+  var sections = Array.prototype.slice.call(document.querySelectorAll('main section'));
+  var links = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
+  function norm(s) { return (s || '').toLowerCase().replace(/\s+/g, ' '); }
+  q.addEventListener('input', function () {
+    var v = norm(q.value.trim());
+    sections.forEach(function (sec) {
+      var hay = norm(sec.textContent + ' ' + (sec.getAttribute('data-search') || ''));
+      sec.classList.toggle('hidden', v.length > 0 && hay.indexOf(v) === -1);
+    });
+    links.forEach(function (a) {
+      var id = a.getAttribute('href').slice(1);
+      var sec = document.getElementById(id);
+      a.parentElement.style.display = (sec && sec.classList.contains('hidden')) ? 'none' : '';
+    });
+  });
+})();
+</script>
+</body>
+</html>

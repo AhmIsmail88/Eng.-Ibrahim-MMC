@@ -52,7 +52,8 @@ class MeterService:
             result = []
             for m in rows:
                 last = s.scalars(select(MeterReading)
-                                 .where(MeterReading.meter_id == m.id)
+                                 .where(MeterReading.meter_id == m.id,
+                                        MeterReading.quality != "rejected")
                                  .order_by(MeterReading.reading_at.desc()).limit(1)).first()
                 result.append(MeterRow(id=m.id, code=m.meter_code, kind=m.kind,
                                        unit_code=m.unit_code,
@@ -173,3 +174,66 @@ class MeterService:
             return int(s.scalar(
                 select(func.count()).select_from(MeterReading)
                 .where(MeterReading.asset_id == asset_id)) or 0)
+
+    def correct_last_reading(self, actor: AuthUser | None, asset_id: str, meter_id: str,
+                             value: str, reading_at: str, reason: str) -> Result[str]:
+        """Documented meter correction (SPEC 6.3, 7.3; review F-02).
+
+        The wrong latest reading keeps its value in history but is marked `rejected`, so
+        it no longer drives due dates or the no-decrease rule. The new reading points at
+        it through `correction_of_id` and carries the reason. A correction may go below
+        the wrong value, never below the last good reading before it.
+        """
+        guard = _require_editor(actor)
+        if not guard.ok:
+            return Result.failure(guard.error_code or "err.permission_denied")
+        if not (reason or "").strip():
+            return Result.failure("err.reason_required")
+        number = _to_decimal(value)
+        if number is None:
+            return Result.failure("err.meter_value_invalid")
+        if not reading_at:
+            return Result.failure("err.reading_date_required")
+        with self._db.unit_of_work() as s:
+            meter = s.get(MeterDefinition, meter_id)
+            if meter is None or meter.asset_id != asset_id:
+                return Result.failure("err.asset_not_found")
+            wrong = s.scalars(select(MeterReading)
+                              .where(MeterReading.meter_id == meter_id,
+                                     MeterReading.quality != "rejected")
+                              .order_by(MeterReading.reading_at.desc()).limit(1)).first()
+            if wrong is None:
+                return Result.failure("err.meter_nothing_to_correct")
+            if reading_at < wrong.reading_at[:len(reading_at)]:
+                return Result.failure("err.meter_correction_date")
+            good = s.scalars(select(MeterReading)
+                             .where(MeterReading.meter_id == meter_id,
+                                    MeterReading.quality != "rejected",
+                                    MeterReading.id != wrong.id,
+                                    MeterReading.reading_at <= wrong.reading_at)
+                             .order_by(MeterReading.reading_at.desc()).limit(1)).first()
+            if meter.kind == "cumulative" and good is not None \
+                    and number < Decimal(good.value_decimal):
+                return Result.failure("err.meter_decrease")
+            wrong.quality = "rejected"
+            row = MeterReading(
+                asset_id=asset_id, meter_id=meter_id, value_decimal=str(number),
+                reading_at=reading_at, entered_at=utcnow_iso(), source="manual",
+                quality="valid", correction_of_id=wrong.id, notes=reason.strip(),
+                actor_id=actor.id if actor else None)
+            s.add(row)
+            s.flush()
+            write_audit(s, "meter_reading", row.id, "reading_corrected",
+                        actor_id=actor.id if actor else None,
+                        before={"value": wrong.value_decimal, "at": wrong.reading_at},
+                        after={"value": str(number), "at": reading_at}, reason=reason.strip())
+            return Result.success(row.id)
+
+    def last_reading(self, meter_id: str) -> tuple[str, str] | None:
+        """(value, reading_at) of the reading a correction would replace."""
+        with self._db.session() as s:
+            row = s.scalars(select(MeterReading)
+                            .where(MeterReading.meter_id == meter_id,
+                                   MeterReading.quality != "rejected")
+                            .order_by(MeterReading.reading_at.desc()).limit(1)).first()
+            return (row.value_decimal, row.reading_at) if row else None

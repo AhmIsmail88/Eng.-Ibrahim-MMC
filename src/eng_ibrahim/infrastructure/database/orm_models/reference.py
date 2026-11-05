@@ -36,6 +36,8 @@ class AssetType(Base, UuidPk, Timestamps):
     name_ar: Mapped[str] = mapped_column(String(160), nullable=False)
     name_en: Mapped[str | None] = mapped_column(String(160))
     spec_schema_json: Mapped[str | None] = mapped_column(Text)
+    is_active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    __table_args__ = (CheckConstraint("is_active IN (0,1)", name="is_active_bool"),)
 
 
 class MaintenanceTask(Base, UuidPk, Timestamps):
@@ -69,7 +71,9 @@ class Unit(Base):
     label_ar: Mapped[str] = mapped_column(String(60), nullable=False)
     label_en: Mapped[str] = mapped_column(String(60), nullable=False)
     precision: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
-    __table_args__ = (CheckConstraint("precision BETWEEN 0 AND 6", name="precision_range"),)
+    is_active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    __table_args__ = (CheckConstraint("precision BETWEEN 0 AND 6", name="precision_range"),
+                      CheckConstraint("is_active IN (0,1)", name="is_active_bool"))
 
 
 class Currency(Base):
@@ -77,4 +81,6 @@ class Currency(Base):
     code: Mapped[str] = mapped_column(String(3), primary_key=True)
     minor_units: Mapped[int] = mapped_column(Integer, nullable=False)
     name: Mapped[str] = mapped_column(String(80), nullable=False)
-    __table_args__ = (CheckConstraint("minor_units BETWEEN 0 AND 4", name="minor_range"),)
+    is_active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    __table_args__ = (CheckConstraint("minor_units BETWEEN 0 AND 4", name="minor_range"),
+                      CheckConstraint("is_active IN (0,1)", name="is_active_bool"))

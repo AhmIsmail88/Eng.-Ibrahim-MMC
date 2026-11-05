@@ -86,3 +86,27 @@ def test_parts_can_be_imported_from_the_parts_screen(qtbot, ctx, paths, tmp_path
     assert shown and not shown[0].startswith("WARN")
     assert {p.code for p in InventoryService(ctx.db).list_parts()} == {"OIL-15W40", "FLT-9"}
     assert page.table.rowCount() == 2
+
+
+def test_warehouse_choice_and_movement_menu(qtbot, ctx, paths):
+    admin, masters, _asset = _seed(ctx, paths)
+    inv = InventoryService(ctx.db)
+    inv.ensure_default_warehouse()
+    part_id = inv.create_part(admin, "FLT-20", "فلتر", "pcs").value
+    page = PartsPage(ctx)
+    qtbot.addWidget(page)
+    page.show()
+    page.refresh()
+    assert not page.warehouse.isVisible()  # one warehouse: nothing to choose
+    assert len(page.move_menu.actions()) == 7
+    masters.create_warehouse(admin, "WH2", "مخزن الموقع")
+    page.retranslate()
+    assert page.warehouse.isVisible() and page.warehouse.count() == 2
+    page.warehouse.setCurrentIndex(
+        next(i for i in range(page.warehouse.count())
+             if page.warehouse.itemText(i).startswith("WH2")))
+    inv.receive(admin, part_id, "6", 100, warehouse_id=page._warehouse_id())
+    page.refresh()
+    row = next(p for p in page._rows if p.id == part_id)
+    assert row.on_hand == "6"
+    assert ctx.prefs.get("parts_warehouse") == page._warehouse_id()

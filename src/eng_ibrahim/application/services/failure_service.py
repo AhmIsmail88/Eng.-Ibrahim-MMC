@@ -1,6 +1,8 @@
 """Failure reports (SPEC 8): registration, triage, resolve, cancel."""
 from __future__ import annotations
 
+import builtins
+
 from sqlalchemy import or_, select
 
 from ...domain.permissions import can_edit
@@ -26,7 +28,7 @@ class FailureService:
         self._db = db
 
     def list(self, status: str | None = None, asset_id: str | None = None,
-             query: str = "") -> list[FailureRow]:
+             query: str = "") -> builtins.list[FailureRow]:
         with self._db.session() as s:
             stmt = (select(FailureReport, Asset)
                     .join(Asset, FailureReport.asset_id == Asset.id)

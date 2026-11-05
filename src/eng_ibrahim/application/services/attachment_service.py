@@ -10,7 +10,13 @@ from sqlalchemy import select
 
 from ...domain.permissions import can_edit
 from ...infrastructure.database.engine import Database
-from ...infrastructure.database.orm_models import Asset, Attachment
+from ...infrastructure.database.orm_models import (
+    Asset,
+    Attachment,
+    FailureReport,
+    Inspection,
+    WorkOrder,
+)
 from ..dto.result import Result
 from .audit import write_audit
 from .auth_service import AuthUser
@@ -18,6 +24,8 @@ from .auth_service import AuthUser
 MAX_BYTES = 20 * 1024 * 1024
 ALLOWED_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".pdf", ".docx", ".xlsx", ".txt"}
 OWNER_TYPES = ("asset", "work_order", "inspection", "failure")
+_OWNER_MODELS = {"asset": Asset, "work_order": WorkOrder, "inspection": Inspection,
+                 "failure": FailureReport}
 
 
 def _require_editor(actor: AuthUser | None) -> Result[None]:
@@ -67,8 +75,9 @@ class AttachmentService:
             return Result.failure("err.attachment_too_large")
 
         with self._db.session() as s:
-            if owner_type == "asset" and s.get(Asset, owner_id) is None:
-                return Result.failure("err.asset_not_found")
+            # Every owner must exist: an attachment is never orphaned from the start.
+            if s.get(_OWNER_MODELS[owner_type], owner_id) is None:
+                return Result.failure("err.not_found")
 
         folder = self._root / "attachments" / owner_type / owner_id
         folder.mkdir(parents=True, exist_ok=True)

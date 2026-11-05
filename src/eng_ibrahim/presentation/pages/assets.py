@@ -4,8 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QDate, Qt, QUrl
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -33,7 +32,6 @@ from PySide6.QtWidgets import (
 from ...application.context import AppContext
 from ...application.dto.asset import AssetDetail, AssetInput
 from ...application.services.asset_service import AssetService
-from ...application.services.attachment_service import AttachmentService
 from ...application.services.import_service import ImportService
 from ...application.services.inventory_service import InventoryService
 from ...application.services.master_data_service import MasterDataService
@@ -45,9 +43,11 @@ from ...infrastructure.database.orm_models.operations import (
     OPERATIONAL_STATUS,
     STRATEGY,
 )
-from ...infrastructure.exports.qr_labels import write_sheet
+from ...infrastructure.exports.qr_labels import write_sheets
+from ..widgets.attachments_panel import AttachmentsPanel
 from ..widgets.import_flow import run_import
-from ..widgets.tables import polish_table
+from ..widgets.meter_correction import CorrectionBox
+from ..widgets.tables import polish_table, sortable
 from .base import BasePage, isolate, make_card, make_title, scrollable, select_row, vbox
 
 
@@ -136,7 +136,7 @@ class AssetDialog(QDialog):
         arabic = self.ctx.localizer.is_rtl
         self._cats = self.masters.categories()
         self._locs = self.masters.locations()
-        self._units = self.masters.units()
+        self._units = self.masters.units(active_only=True)
         for combo, values, tr_prefix in (
             (self.criticality, CRITICALITY, "value.criticality"),
             (self.status, OPERATIONAL_STATUS, "value.status"),
@@ -284,7 +284,8 @@ class AssetDialog(QDialog):
 
 
 class ReadingDialog(QDialog):
-    def __init__(self, ctx: AppContext, meters, parent: QWidget | None = None) -> None:
+    def __init__(self, ctx: AppContext, meters, parent: QWidget | None = None,
+                 last_reading=None) -> None:
         super().__init__(parent)
         self.ctx = ctx
         self.setModal(True)
@@ -305,6 +306,13 @@ class ReadingDialog(QDialog):
         form.addRow(self.lbl_value, self.value)
         form.addRow(self.lbl_when, self.when)
         form.addRow(self.lbl_notes, self.notes)
+        # Correction replaces the last reading of the selected meter (review F-02).
+        self.correction = CorrectionBox(ctx, last_reading(self.meter.currentData())
+                                        if last_reading else None)
+        form.addRow(self.correction)
+        if last_reading:
+            self.meter.currentIndexChanged.connect(
+                lambda _i: self.correction.set_last(last_reading(self.meter.currentData())))
         self.buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
         self.buttons.accepted.connect(self.accept)
@@ -327,7 +335,6 @@ class AssetsPage(BasePage):
         self.meters = MeterService(ctx.db)
         self.inventory = InventoryService(ctx.db)
         self.importer = ImportService(ctx.db)
-        self.attachments = AttachmentService(ctx.db, ctx.paths.root)
         self._rows: list = []
         self._detail: AssetDetail | None = None
         self._build()
@@ -377,6 +384,7 @@ class AssetsPage(BasePage):
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.verticalHeader().setVisible(False)
         polish_table(self.table, lambda: self.ctx.tr("common.no_data"))
+        sortable(self.table, self)  # header click sorts (F-14)
         self.table.itemSelectionChanged.connect(self._on_select)
         self.table.currentCellChanged.connect(lambda *_a: self._on_select())
         left_lay.addWidget(self.table)
@@ -480,23 +488,8 @@ class AssetsPage(BasePage):
         return page
 
     def _build_attachments(self) -> QWidget:
-        page = QWidget()
-        lay = QVBoxLayout(page)
-        self.attach_table = QTableWidget(0, 3)
-        self.attach_table.verticalHeader().setVisible(False)
-        polish_table(self.attach_table, lambda: self.ctx.tr("common.no_data"))
-        self.attach_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        bar = QHBoxLayout()
-        self.btn_attach = QPushButton()
-        self.btn_attach.clicked.connect(self._add_attachment)
-        self.btn_attach_open = QPushButton()
-        self.btn_attach_open.clicked.connect(self._open_attachment)
-        bar.addWidget(self.btn_attach)
-        bar.addWidget(self.btn_attach_open)
-        bar.addStretch(1)
-        lay.addWidget(self.attach_table, 1)
-        lay.addLayout(bar)
-        return page
+        self.attach_panel = AttachmentsPanel(self.ctx, "asset")
+        return self.attach_panel
 
     def _build_history(self) -> QWidget:
         page = QWidget()
@@ -527,10 +520,7 @@ class AssetsPage(BasePage):
         self.tabs.setTabText(3, tr("assets.tab.parts"))
         self.tabs.setTabText(4, tr("assets.tab.attachments"))
         self.tabs.setTabText(5, tr("assets.tab.history"))
-        self.btn_attach.setText(tr("attachments.add"))
-        self.btn_attach_open.setText(tr("attachments.open"))
-        self.attach_table.setHorizontalHeaderLabels([tr(k) for k in (
-            "attachments.name", "attachments.size", "attachments.date")])
+        self.attach_panel.retranslate()
         self.detail_title.setText(tr("assets.select_hint") if self._detail is None
                                   else f"{self._detail.code} — {self._detail.name_ar}")
         self.detail_hint.setText("" if self._detail else tr("assets.select_hint"))
@@ -721,40 +711,7 @@ class AssetsPage(BasePage):
                 self.parts_table.setItem(i, col, QTableWidgetItem(text))
 
     def _render_attachments(self, d: AssetDetail) -> None:
-        rows = self.attachments.list("asset", d.id)
-        self._attach_rows = rows
-        self.attach_table.setRowCount(len(rows))
-        for i, row in enumerate(rows):
-            cells = (row.filename, f"{row.size_bytes / 1024:.0f} KB", row.added_at[:10])
-            for col, text in enumerate(cells):
-                item = QTableWidgetItem(text)
-                if col == 0:
-                    item.setData(Qt.ItemDataRole.UserRole, row.id)
-                self.attach_table.setItem(i, col, item)
-
-    def _add_attachment(self) -> None:
-        if self._detail is None or not self.ctx.can_edit:
-            return
-        path, _f = QFileDialog.getOpenFileName(
-            self, self.ctx.tr("attachments.add"), "",
-            "Images/PDF (*.png *.jpg *.jpeg *.webp *.pdf *.docx *.xlsx *.txt)")
-        if not path:
-            return
-        result = self.attachments.add(self.ctx.current_user, "asset", self._detail.id, Path(path))
-        if not result.ok:
-            QMessageBox.warning(self, self.ctx.tr("attachments.add"),
-                                self.ctx.tr(result.error_code or "err.invalid"))
-            return
-        self._render_attachments(self._detail)
-
-    def _open_attachment(self) -> None:
-        row = self.attach_table.currentRow()
-        rows = getattr(self, "_attach_rows", [])
-        if not (0 <= row < len(rows)):
-            return
-        path = self.attachments.path(rows[row].id)
-        if path is not None:
-            QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
+        self.attach_panel.set_owner(d.id)
 
     def _render_history(self, d: AssetDetail) -> None:
         self.history.setRowCount(len(d.history))
@@ -788,14 +745,15 @@ class AssetsPage(BasePage):
         if not path:
             return
         arabic = self.ctx.localizer.is_rtl
-        items = [(row.code, row.name(arabic)) for row in self._rows[:40]]
+        items = [(row.code, row.name(arabic)) for row in self._rows]  # all listed (F-16)
         try:
-            write_sheet(items, Path(path))
+            pages = write_sheets(items, Path(path))
         except Exception as exc:
             QMessageBox.critical(self, self.ctx.tr("assets.qr"), str(exc))
             return
         QMessageBox.information(self, self.ctx.tr("assets.qr"),
-                                self.ctx.tr("reports.saved", path=path))
+                                self.ctx.tr("reports.saved", path=path)
+                                + (f"  (+{len(pages) - 1})" if len(pages) > 1 else ""))
 
     def _import(self) -> None:
         if run_import(self, self.ctx, "assets", self.ctx.tr("assets.import")):
@@ -864,12 +822,17 @@ class AssetsPage(BasePage):
             QMessageBox.information(self, self.ctx.tr("assets.tab.meters"),
                                     self.ctx.tr("assets.meter.empty"))
             return
-        dialog = ReadingDialog(self.ctx, meters, self)
+        dialog = ReadingDialog(self.ctx, meters, self, last_reading=self.meters.last_reading)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         meter_id, value, when, notes = dialog.payload()
-        result = self.meters.add_reading(self.ctx.current_user, self._detail.id,
-                                         meter_id, value, when, notes)
+        reason = dialog.correction.correction_reason()
+        if reason is not None:
+            result = self.meters.correct_last_reading(self.ctx.current_user, self._detail.id,
+                                                      meter_id, value, when, reason)
+        else:
+            result = self.meters.add_reading(self.ctx.current_user, self._detail.id,
+                                             meter_id, value, when, notes)
         if not result.ok:
             QMessageBox.warning(self, self.ctx.tr("assets.reading.title"),
                                 self.ctx.tr(result.error_code or "err.invalid"))

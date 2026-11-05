@@ -1,10 +1,11 @@
 """Purchase requests (P1): approve, then receive straight into the stock ledger."""
 from __future__ import annotations
 
+import builtins
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 
-from sqlalchemy import func, select
+from sqlalchemy import func, literal_column, select
 
 from ...domain.permissions import can_edit
 from ...infrastructure.database.engine import Database
@@ -42,6 +43,16 @@ class _Abort(Exception):
 
 
 @dataclass(frozen=True)
+class RequestDetail:
+    id: str
+    number: str
+    supplier_id: str | None
+    status: str
+    notes: str | None
+    lines: list[tuple[str, str, int]]  # (part_id, quantity, unit cost in minor units)
+
+
+@dataclass(frozen=True)
 class RequestRow:
     id: str
     number: str
@@ -70,39 +81,96 @@ class PurchaseService:
             return rows
 
     def create(self, actor: AuthUser | None, supplier_id: str | None,
-               lines: list[tuple[str, str, int]], notes: str | None = None) -> Result[str]:
+               lines: builtins.list[tuple[str, str, int]], notes: str | None = None) -> Result[str]:
         guard = _require_editor(actor)
         if not guard.ok:
             return Result.failure(guard.error_code or "err.permission_denied")
+        try:
+            with self._db.unit_of_work() as s:
+                prepared, total = self._prepare(s, supplier_id, lines)
+                request = PurchaseRequest(
+                    request_no=next_number(s, "PR"), supplier_id=supplier_id,
+                    status="Draft", requested_by=actor.id if actor else None, notes=notes,
+                    estimated_total_minor=total)
+                s.add(request)
+                s.flush()
+                self._write_lines(s, request.id, prepared)
+                write_audit(s, "purchase_request", request.id, "pr_created",
+                            actor_id=actor.id if actor else None,
+                            after={"number": request.request_no, "total": total,
+                                   "lines": len(prepared)})
+                return Result.success(request.id)
+        except _Abort as exc:
+            return Result.failure(exc.code)
+
+    def detail(self, request_id: str) -> RequestDetail | None:
+        with self._db.session() as s:
+            request = s.get(PurchaseRequest, request_id)
+            if request is None:
+                return None
+            lines = [(line.part_id, line.quantity_decimal, line.estimated_cost_minor)
+                     for line in s.scalars(select(PurchaseRequestLine)
+                                           .where(PurchaseRequestLine.request_id == request_id)
+                                           # entry order (SQLite rowid), ids are random UUIDs
+                                           .order_by(literal_column("rowid")))]
+            return RequestDetail(id=request.id, number=request.request_no,
+                                 supplier_id=request.supplier_id, status=request.status,
+                                 notes=request.notes, lines=lines)
+
+    def update(self, actor: AuthUser | None, request_id: str, supplier_id: str | None,
+               lines: builtins.list[tuple[str, str, int]], notes: str | None = None) -> Result[None]:
+        """Correct a request while it is a draft: lines are replaced as a whole (F-06)."""
+        guard = _require_editor(actor)
+        if not guard.ok:
+            return Result.failure(guard.error_code or "err.permission_denied")
+        try:
+            with self._db.unit_of_work() as s:
+                request = s.get(PurchaseRequest, request_id)
+                if request is None:
+                    return Result.failure("err.not_found")
+                if request.status != "Draft":
+                    return Result.failure("err.pr_status_invalid")
+                prepared, total = self._prepare(s, supplier_id, lines)
+                before = {"total": request.estimated_total_minor}
+                for line in s.scalars(select(PurchaseRequestLine).where(
+                        PurchaseRequestLine.request_id == request_id)):
+                    s.delete(line)
+                s.flush()
+                self._write_lines(s, request_id, prepared)
+                request.supplier_id = supplier_id
+                request.notes = notes
+                request.estimated_total_minor = total
+                write_audit(s, "purchase_request", request_id, "pr_updated",
+                            actor_id=actor.id if actor else None, before=before,
+                            after={"total": total, "lines": len(prepared)})
+                return Result.success()
+        except _Abort as exc:
+            return Result.failure(exc.code)
+
+    @staticmethod
+    def _prepare(s, supplier_id: str | None,
+                 lines: builtins.list[tuple[str, str, int]]) -> tuple[builtins.list[tuple[str, str, int]], int]:
         if not lines:
-            return Result.failure("err.pr_lines_required")
-        with self._db.unit_of_work() as s:
-            if supplier_id and s.get(Supplier, supplier_id) is None:
-                return Result.failure("err.not_found")
-            total = 0
-            prepared = []
-            for part_id, quantity, cost_minor in lines:
-                qty = _qty(quantity)
-                if qty is None or cost_minor < 0:
-                    return Result.failure("err.quantity_invalid")
-                if s.get(Part, part_id) is None:
-                    return Result.failure("err.part_not_found")
-                prepared.append((part_id, str(qty), cost_minor))
-                total += int(qty * cost_minor)
-            request = PurchaseRequest(
-                request_no=next_number(s, "PR"), supplier_id=supplier_id,
-                status="Draft", requested_by=actor.id if actor else None, notes=notes,
-                estimated_total_minor=total)
-            s.add(request)
-            s.flush()
-            for part_id, qty, cost_minor in prepared:
-                s.add(PurchaseRequestLine(request_id=request.id, part_id=part_id,
-                                          quantity_decimal=qty,
-                                          estimated_cost_minor=cost_minor))
-            write_audit(s, "purchase_request", request.id, "pr_created",
-                        actor_id=actor.id if actor else None,
-                        after={"number": request.request_no, "total": total})
-            return Result.success(request.id)
+            raise _Abort("err.pr_lines_required")
+        if supplier_id and s.get(Supplier, supplier_id) is None:
+            raise _Abort("err.not_found")
+        total = 0
+        prepared = []
+        for part_id, quantity, cost_minor in lines:
+            qty = _qty(quantity)
+            if qty is None or cost_minor is None or cost_minor < 0:
+                raise _Abort("err.quantity_invalid")
+            if s.get(Part, part_id) is None:
+                raise _Abort("err.part_not_found")
+            prepared.append((part_id, str(qty), int(cost_minor)))
+            total += int((qty * cost_minor).to_integral_value())
+        return prepared, total
+
+    @staticmethod
+    def _write_lines(s, request_id: str, prepared: builtins.list[tuple[str, str, int]]) -> None:
+        for part_id, qty, cost_minor in prepared:
+            s.add(PurchaseRequestLine(request_id=request_id, part_id=part_id,
+                                      quantity_decimal=qty, estimated_cost_minor=cost_minor))
 
     def approve(self, actor: AuthUser | None, request_id: str) -> Result[None]:
         return self._status(actor, request_id, "Approved", ("Draft",))

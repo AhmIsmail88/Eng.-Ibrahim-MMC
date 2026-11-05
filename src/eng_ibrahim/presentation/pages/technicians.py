@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 
 from ...application.context import AppContext
 from ...application.services.master_data_service import MasterDataService
-from ..widgets.tables import polish_table
+from ..widgets.tables import polish_table, sortable
 from .base import BasePage, make_card, make_title, vbox
 
 TRADES = ("Mechanical", "Electrical", "Instrumentation", "Vehicle", "General")
@@ -35,7 +35,8 @@ class NewTechnicianDialog(QDialog):
         form = QFormLayout(self)
         self.code, self.name = QLineEdit(), QLineEdit()
         self.trade = QComboBox()
-        self.trade.addItems(TRADES)
+        for trade in TRADES:  # stored in English, shown in the UI language
+            self.trade.addItem(ctx.tr(f"value.trade.{trade}"), trade)
         self.department = QLineEdit()
         self.rate = QDoubleSpinBox()
         self.rate.setMaximum(1_000_000)
@@ -60,7 +61,7 @@ class NewTechnicianDialog(QDialog):
 
     def payload(self) -> dict:
         return dict(code=self.code.text(), full_name=self.name.text(),
-                    trade=self.trade.currentText(),
+                    trade=self.trade.currentData(),
                     department=self.department.text().strip() or None,
                     hourly_rate_minor=int(round(self.rate.value() * 100)) or None,
                     currency=self.ctx.settings.get("currency_code", "EGP"))
@@ -98,6 +99,7 @@ class TechniciansPage(BasePage):
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         polish_table(self.table, lambda: self.ctx.tr("common.no_data"))
+        sortable(self.table, self)  # header click sorts (F-14)
         card_lay.addWidget(self.table)
         lay.addWidget(card, 1)
 
@@ -115,7 +117,8 @@ class TechniciansPage(BasePage):
         self._rows = self.service.technician_rows()
         self.table.setRowCount(len(self._rows))
         for i, (tech_id, code, name, trade, dept, active) in enumerate(self._rows):
-            cells = (code, name, trade, dept,
+            shown = self.ctx.tr(f"value.trade.{trade}") if trade in TRADES else trade
+            cells = (code, name, shown, dept,
                      self.ctx.tr("users.active" if active else "users.inactive"))
             for col, text in enumerate(cells):
                 item = QTableWidgetItem(text)

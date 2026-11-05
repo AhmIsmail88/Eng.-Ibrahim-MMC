@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, QRunnable, Signal
 
-from ...application.services.report_service import ReportService
+from ...application.services.report_service import ReportService, localized
 from ...infrastructure.database.engine import Database
 from ...infrastructure.exports.pdf_renderer import write_pdf
 from ...infrastructure.exports.xlsx_renderer import write_xlsx
@@ -24,7 +24,8 @@ class ExportWorker(QRunnable):
 
     def __init__(self, db: Database, code: str, kind: str, target: Path,
                  title: str, column_titles: list[str], meta_lines: list[str],
-                 total_labels: dict[str, str], filters: dict | None = None) -> None:
+                 total_labels: dict[str, str], filters: dict | None = None,
+                 translate=None) -> None:
         super().__init__()
         self.signals = ExportWorker.Signals()
         self._db = db
@@ -36,10 +37,13 @@ class ExportWorker(QRunnable):
         self._meta = meta_lines
         self._labels = total_labels
         self._filters = filters or {}
+        self._translate = translate  # Localizer.tr: pure Python, safe off the UI thread
 
     def run(self) -> None:
         try:
             report = ReportService(self._db).build(self._code, **self._filters)
+            if self._translate is not None:
+                report = localized(report, self._translate)
             if self._kind == "pdf":
                 write_pdf(self._target, report, self._title, self._columns,
                           self._meta, self._labels)

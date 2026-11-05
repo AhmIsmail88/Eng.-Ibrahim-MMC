@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 
 from ...application.context import AppContext
 from ...application.services.master_data_service import MasterDataService
-from ..widgets.tables import polish_table
+from ..widgets.tables import polish_table, sortable
 from .base import BasePage, make_card, make_title, vbox
 
 
@@ -75,6 +75,7 @@ class SuppliersPage(BasePage):
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         polish_table(self.table, lambda: self.ctx.tr("common.no_data"))
+        sortable(self.table, self)  # header click sorts (F-14)
         card_lay.addWidget(self.table)
         lay.addWidget(card, 1)
         self.retranslate()

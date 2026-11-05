@@ -152,3 +152,21 @@ def test_cancelled_order_is_read_only_for_time_and_expenses(world):
     assert log.error_code == "err.wo_read_only"
     expense = orders.add_expense(admin, wo_id, "2026-03-01", "Other", 500)
     assert expense.error_code == "err.wo_read_only"
+
+
+def test_order_can_be_corrected_until_work_starts(world):
+    _ctx, _auth, admin, _m, asset_id, tech_id, orders = world
+    wo_id = _new_order(orders, admin, asset_id)
+    assert orders.update(admin, wo_id, "إصلاح المضخة 3", "تسريب", "Critical",
+                         "2027-01-15").ok
+    d = orders.detail(wo_id)
+    assert (d.title, d.priority, d.due_at, d.description) == (
+        "إصلاح المضخة 3", "Critical", "2027-01-15", "تسريب")
+    assert orders.update(admin, wo_id, " ", None, "High", None).error_code \
+        == "err.wo_title_required"
+    orders.transition(admin, wo_id, sm.OPEN)
+    orders.assign(admin, wo_id, tech_id)
+    assert orders.update(admin, wo_id, "عنوان", None, "High", None).ok  # still Assigned
+    orders.transition(admin, wo_id, sm.IN_PROGRESS)
+    assert orders.update(admin, wo_id, "تغيير", None, "High", None).error_code \
+        == "err.wo_locked_for_edit"

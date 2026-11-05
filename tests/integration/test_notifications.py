@@ -50,3 +50,35 @@ def test_overdue_pm_and_low_stock_are_reported(world):
     keys = {row.title_key for row in rows}
     assert "notify.pm_overdue" in keys and "notify.low_stock" in keys
     assert rows[0].severity == "critical"
+
+
+def test_due_soon_plan_appears_without_crashing(ctx, paths):
+    """A 'due soon' plan used to raise AttributeError (PlanRow has no `due`)."""
+    from datetime import date, timedelta
+
+    from eng_ibrahim.application.dto.asset import AssetInput
+    from eng_ibrahim.application.services.asset_service import AssetService
+    from eng_ibrahim.application.services.auth_service import AuthService
+    from eng_ibrahim.application.services.first_run_service import (
+        FirstRunInput,
+        FirstRunService,
+    )
+    from eng_ibrahim.application.services.master_data_service import MasterDataService
+    from eng_ibrahim.application.services.notification_service import NotificationService
+    from eng_ibrahim.application.services.pm_service import PMService
+    FirstRunService(ctx.db).complete(FirstRunInput(
+        "محطة", "Station", "EGP", "Africa/Cairo", "admin", "M", paths.backups, "Admin#2026"))
+    admin = AuthService(ctx.db).authenticate("admin", "Admin#2026").value
+    masters = MasterDataService(ctx.db)
+    category = next(c for c in masters.categories() if c.code == "PUMP")
+    asset = AssetService(ctx.db).create(admin, AssetInput(
+        asset_code="P-SOON", asset_name_ar="مضخة", category_id=category.id,
+        location_id=masters.locations()[0].id)).value
+    # Due in 3 days with a 7-day warning window: "due soon".
+    PMService(ctx.db).create(admin, asset_id=asset, title="فحص", strategy="Calendar",
+                             trigger_policy="DATE_ONLY", calendar_interval_value=30,
+                             calendar_interval_unit="days", warning_days=7,
+                             base_date=(date.today() - timedelta(days=27)).isoformat())
+    notices = NotificationService(ctx.db).scan()
+    soon = [n for n in notices if n.title_key == "notify.pm_due"]
+    assert len(soon) == 1 and (date.today() + timedelta(days=3)).isoformat() in soon[0].detail

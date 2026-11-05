@@ -28,7 +28,7 @@ from ...application.dto.preventive import PlanDetail
 from ...application.services.asset_service import AssetService
 from ...application.services.meter_service import MeterService
 from ...application.services.pm_service import PMService
-from ..widgets.tables import polish_table
+from ..widgets.tables import polish_table, sortable
 from .base import BasePage, make_card, make_title, vbox
 
 
@@ -174,6 +174,7 @@ class PMPage(BasePage):
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         polish_table(self.table, lambda: self.ctx.tr("common.no_data"))
+        sortable(self.table, self)  # header click sorts (F-14)
         self.table.itemSelectionChanged.connect(self._on_select)
         left_lay.addWidget(self.table)
         split.addWidget(left)
